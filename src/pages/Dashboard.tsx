@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { apps } from "../data/apps";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "../lib/utils";
 
 // App Imports for Live Previews
