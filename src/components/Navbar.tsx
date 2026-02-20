@@ -1,4 +1,4 @@
-import { Atom, ChevronLeft, Home } from "lucide-react";
+import { ChevronLeft, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
 
@@ -23,18 +23,16 @@ export function Navbar() {
                     )}
                     
                     <Link to="/" className="flex items-center gap-3 group">
-                        <div className="relative flex items-center justify-center">
-                            <div className="absolute inset-0 bg-blue-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity rounded-full"></div>
-                            <div className="relative rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-2 shadow-inner group-hover:scale-105 transition-transform duration-300">
-                                <Atom className="h-6 w-6 text-blue-400 group-hover:text-blue-300 transition-colors" />
-                            </div>
+                        <div className="relative flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                             <div className="absolute inset-0 bg-blue-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full"></div>
+                            <img src="/logo.png" alt="MConHub Logo" className="h-14 w-auto object-contain relative z-10" />
                         </div>
                         <div className="flex flex-col">
                             <span className="text-lg font-bold tracking-tight text-white leading-none">
-                                MCON <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Hub</span>
+                                MCon<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Hub</span>
                             </span>
                             <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest group-hover:text-slate-400 transition-colors">
-                                Medios Continuos
+                                Interactivo
                             </span>
                         </div>
                     </Link>
