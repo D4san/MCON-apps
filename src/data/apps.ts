@@ -1,11 +1,8 @@
 import { 
-    Calculator, 
     Atom, 
     Wind, 
     Waves, 
     Box, 
-    Combine, 
-    Move3d,
     Activity,
     Route
 } from "lucide-react";
@@ -19,6 +16,7 @@ export interface AppDefinition {
     externalUrl?: string; // For legacy HTML apps if needed
     tags: string[];
     color: string; // Tailwinc color class equivalent for gradients
+    isPlaceholder?: boolean;
 }
 
 export const apps: AppDefinition[] = [
