@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-primary: #3b82f6;
+  --color-secondary: #06b6d4;
+  --color-accent: #8b5cf6;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Custom Animations */
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-glow: glow 2s ease-in-out infinite alternate;
+  --animate-slide-up: slideUp 0.5s ease-out forwards;
+  --animate-fade-in: fadeIn 0.5s ease-out forwards;
+
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+
+  @keyframes glow {
+    from { box-shadow: 0 0 10px -5px var(--color-primary); }
+    to { box-shadow: 0 0 20px 5px var(--color-primary); }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-slate-200 antialiased overflow-x-hidden;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15), transparent 40%),
+      radial-gradient(circle at 0% 50%, rgba(6, 182, 212, 0.1), transparent 30%),
+      radial-gradient(circle at 100% 50%, rgba(139, 92, 246, 0.1), transparent 30%);
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-slate-900/70 backdrop-blur-md border border-white/10 shadow-xl;
+  }
+  
+  .glass-hover {
+    @apply hover:bg-slate-800/80 hover:border-white/20 hover:shadow-2xl transition-all duration-300;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500;
+  }
+  
+  .text-gradient-purple {
+     @apply bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-slate-950;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-700 rounded-full hover:bg-slate-600 border border-slate-900;
+}
