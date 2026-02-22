@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, RotateCcw, ArrowRight } from 'lucide-react';
+import { useIsPortrait } from '../../hooks/useIsPortrait';
 
 // --- Types ---
 interface Particle {
@@ -44,6 +45,7 @@ const MeanFreePath = () => {
     });
     const [results, setResults] = useState<GameResults>({ collisions: 0, distance: 0, mfp: 0 });
     const [liveCollisions, setLiveCollisions] = useState(0);
+    const isPortrait = useIsPortrait();
 
     // --- Refs ---
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -354,8 +356,8 @@ const MeanFreePath = () => {
     }, [gameState, initPreview]);
 
     return (
-        <div className="w-full text-slate-200 p-4 font-sans flex flex-col items-center">
-             <div className="w-full max-w-4xl flex items-center justify-between mb-4 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+        <div className="w-full text-slate-200 p-2 md:p-4 font-sans flex flex-col items-center">
+             <div className="w-full max-w-4xl flex items-center justify-between mb-2 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent flex items-center gap-2">
                     <ArrowRight className="text-green-400"/> Camino Libre Medio
                 </h1>
@@ -366,7 +368,9 @@ const MeanFreePath = () => {
                 )}
             </div>
 
-            <div className="relative w-full max-w-4xl aspect-[4/3] bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
+            <div className={`relative w-full max-w-4xl bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden ${
+                isPortrait ? 'aspect-[3/4]' : 'aspect-[4/3] max-h-[calc(100vh-10rem)]'
+            }`}>
                 <canvas ref={canvasRef} className="block w-full h-full" />
 
                 {/* Setup Screen */}

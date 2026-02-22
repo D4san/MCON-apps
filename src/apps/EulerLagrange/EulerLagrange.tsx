@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { Play, Pause, RotateCcw, MousePointer2, Activity } from 'lucide-react';
+import { Play, Pause, RotateCcw, MousePointer2, Activity, Settings, X } from 'lucide-react';
+import { useIsPortrait } from '../../hooks/useIsPortrait';
 
 // --- Types ---
 type FlowType = 'Uniforme' | 'Rotación Sólida' | 'Cizalladura' | 'Estancamiento' | 'Vórtice Puntual' | 'Expansión Radial' | 'Espiral' | 'Onda de Compresión' | 'Oscilante';
@@ -121,6 +122,8 @@ const EulerLagrange = () => {
     const [showTracers, setShowTracers] = useState(true);
     const [particleDensity, setParticleDensity] = useState(200);
     const [followMode, setFollowMode] = useState<'none' | 'awaiting' | 'following'>('none');
+    const [configOpen, setConfigOpen] = useState(false);
+    const isPortrait = useIsPortrait();
 
 
     // --- Refs ---
@@ -454,13 +457,32 @@ const EulerLagrange = () => {
     };
 
     return (
-        <div className="w-full text-slate-200 p-4 font-sans">
-             <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
+        <div className="w-full text-slate-200 font-sans relative">
+            {/* Portrait: Floating config toggle */}
+            {isPortrait && (
+                <button
+                    onClick={() => setConfigOpen(!configOpen)}
+                    className="fixed bottom-4 right-4 z-50 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-900/40 transition-all"
+                >
+                    {configOpen ? <X size={22} /> : <Settings size={22} />}
+                </button>
+            )}
+
+            {/* Portrait backdrop */}
+            {isPortrait && configOpen && (
+                <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setConfigOpen(false)} />
+            )}
+
+             <div className={`max-w-7xl mx-auto p-1 md:p-2 ${
+                isPortrait
+                    ? 'flex flex-col gap-3'
+                    : 'grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3 h-full'
+             }`}>
                 
                 {/* Main Area */}
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2 min-h-0">
                     {/* Top Controls */}
-                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-wrap gap-4 items-center justify-between">
+                    <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex flex-wrap gap-3 items-center justify-between">
                          <div className="flex items-center gap-3">
                             <label className="font-bold text-slate-400 text-sm">Flujo:</label>
                             <select 
@@ -557,12 +579,16 @@ const EulerLagrange = () => {
                 </div>
 
                 {/* Sidebar */}
-                <div className="flex flex-col gap-4">
+                <div className={`flex flex-col gap-3 ${
+                    isPortrait
+                        ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} bg-slate-950 p-4 rounded-t-2xl border-t border-slate-800`
+                        : 'min-h-0'
+                }`}>
                     
                     {/* Info */}
-                    <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 space-y-4">
-                        <div className="border-b border-slate-800 pb-3 mb-3">
-                            <h3 className="font-bold text-slate-200">Ecuaciones del Flujo</h3>
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div className="border-b border-slate-800 pb-2 mb-2">
+                            <h3 className="font-bold text-sm text-slate-200">Ecuaciones del Flujo</h3>
                         </div>
                         
                         <div>
@@ -581,8 +607,8 @@ const EulerLagrange = () => {
                     </div>
 
                     {/* Vis Settings */}
-                    <div className="bg-slate-900 p-6 rounded-xl border border-slate-800 space-y-6">
-                         <h3 className="font-bold text-slate-200 border-b border-slate-800 pb-2">Visualización</h3>
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                         <h3 className="font-bold text-sm text-slate-200 border-b border-slate-800 pb-2">Visualización</h3>
                          
                          {/* Follow Button */}
                          <button 
@@ -607,7 +633,7 @@ const EulerLagrange = () => {
                              <><MousePointer2 size={18}/> Seguir Partícula</>}
                          </button>
                          
-                         <div className="space-y-4">
+                         <div className="space-y-3">
                              <label className="flex items-center justify-between cursor-pointer">
                                  <span className="text-sm text-slate-300">Vectores (Quiver)</span>
                                  <div className={`w-10 h-6 rounded-full p-1 transition-colors ${showQuiver ? 'bg-blue-600' : 'bg-slate-700'}`}

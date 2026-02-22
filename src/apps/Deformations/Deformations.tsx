@@ -4,7 +4,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import * as math from 'mathjs';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { Activity, HelpCircle, ChevronDown, Check, AlertTriangle, Play } from 'lucide-react';
+import { Activity, HelpCircle, ChevronDown, Check, AlertTriangle, Play, Settings, X } from 'lucide-react';
+import { useIsPortrait } from '../../hooks/useIsPortrait';
 
 // --- Constants & Types ---
 const PRESETS = {
@@ -45,6 +46,8 @@ const Deformations = () => {
     const [tensor, setTensor] = useState<TensorState>(INITIAL_TENSOR);
     const [selectedPreset, setSelectedPreset] = useState<string>("");
     const [showHelp, setShowHelp] = useState(false);
+    const [configOpen, setConfigOpen] = useState(false);
+    const isPortrait = useIsPortrait();
 
     // --- Refs ---
     const canvasRef = useRef<HTMLDivElement>(null);
@@ -436,30 +439,53 @@ const Deformations = () => {
     };
 
     return (
-        <div className="w-full text-slate-200 p-4 md:p-8 font-sans">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="w-full text-slate-200 font-sans relative">
+            {/* Portrait: Floating config toggle */}
+            {isPortrait && (
+                <button
+                    onClick={() => setConfigOpen(!configOpen)}
+                    className="fixed bottom-4 right-4 z-50 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-900/40 transition-all"
+                >
+                    {configOpen ? <X size={22} /> : <Settings size={22} />}
+                </button>
+            )}
+
+            {/* Portrait backdrop */}
+            {isPortrait && configOpen && (
+                <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setConfigOpen(false)} />
+            )}
+
+            <div className={`max-w-7xl mx-auto gap-3 p-1 md:p-2 ${
+                isPortrait 
+                    ? 'flex flex-col' 
+                    : 'grid grid-cols-1 lg:grid-cols-2 gap-3 h-full'
+            }`}>
                 
                 {/* Control Panel */}
-                <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl space-y-6">
-                    <div className="border-b border-slate-800 pb-4">
-                        <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
-                           <Activity className="text-blue-400"/> Calculadora de Deformación
+                <div className={`bg-slate-900 p-3 rounded-2xl border border-slate-800 shadow-xl space-y-2 ${
+                    isPortrait 
+                        ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} rounded-b-none` 
+                        : ''
+                }`}>
+                    <div className="border-b border-slate-800 pb-2">
+                        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
+                           <Activity className="text-blue-400" size={20}/> Calculadora de Deformación
                         </h1>
                     </div>
 
                     {/* Formula Display */}
-                    <div ref={formulaRef} className="bg-slate-800/50 p-4 rounded-lg flex justify-center text-lg text-slate-300"></div>
+                    <div ref={formulaRef} className="bg-slate-800/50 p-2 rounded-lg flex justify-center text-sm text-slate-300"></div>
 
                     {/* Presets */}
                     <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2 mb-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2 mb-1">
                             <Check size={14} /> Cargar Ejemplo
                         </label>
                         <div className="relative">
                             <select 
                                 value={selectedPreset}
                                 onChange={handlePresetChange}
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 appearance-none focus:outline-none focus:border-blue-500 transition-colors cursor-pointer text-slate-300"
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-blue-500 transition-colors cursor-pointer text-slate-300"
                             >
                                 <option value="">-- Personalizado --</option>
                                 {Object.entries(PRESETS).map(([key, val]) => (
@@ -490,18 +516,18 @@ const Deformations = () => {
                     </div>
 
                     {/* Inputs */}
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         {[
                             { label: "u", val: u, set: setU, color: "text-rose-400" },
                             { label: "v", val: v, set: setV, color: "text-blue-400" },
                             { label: "w", val: w, set: setW, color: "text-emerald-400" },
                         ].map(({label, val, set, color}) => (
                            <div key={label} className="group">
-                               <label className={`block text-sm font-bold mb-1 ${color}`}>{label}(x,y,z) =</label>
+                               <label className={`block text-xs font-bold mb-0.5 ${color}`}>{label}(x,y,z) =</label>
                                <input 
                                  value={val}
                                  onChange={(e) => set(e.target.value)}
-                                 className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 font-mono text-sm focus:border-blue-500 focus:outline-none transition-colors text-slate-200"
+                                 className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 font-mono text-sm focus:border-blue-500 focus:outline-none transition-colors text-slate-200"
                                  placeholder="0"
                                />
                            </div>
@@ -511,7 +537,7 @@ const Deformations = () => {
                     <button 
                         onClick={handleCalculate}
                         disabled={loading}
-                        className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
                         {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Play size={18} fill="currentColor"/>}
                         {loading ? "Calculando..." : "Calcular y Visualizar"}
@@ -524,11 +550,11 @@ const Deformations = () => {
                     )}
 
                     {/* Tensor Output */}
-                    <div className="pt-4 border-t border-slate-800">
-                        <h3 className="text-center font-bold text-slate-400 mb-4">Tensor de Deformación Resultante</h3>
-                        <div className="grid grid-cols-3 gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                    <div className="pt-2 border-t border-slate-800">
+                        <h3 className="text-center font-bold text-slate-400 text-sm mb-2">Tensor de Deformación Resultante</h3>
+                        <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
                             {['e11', 'e12', 'e13', 'e21', 'e22', 'e23', 'e31', 'e32', 'e33'].map((key) => (
-                                <div key={key} className="bg-slate-900/50 rounded p-2 flex items-center justify-center border border-slate-800/50 min-h-[3rem]">
+                                <div key={key} className="bg-slate-900/50 rounded p-1 flex items-center justify-center border border-slate-800/50 min-h-[2rem] text-sm">
                                     <MathTex tex={tensor[key as keyof TensorState]} />
                                 </div>
                             ))}
@@ -537,7 +563,9 @@ const Deformations = () => {
                 </div>
 
                 {/* Visualization Panel */}
-                <div className="bg-slate-900 p-1 rounded-2xl border border-slate-800 shadow-xl flex flex-col h-[500px] lg:h-auto relative overflow-hidden">
+                <div className={`bg-slate-900 p-1 rounded-2xl border border-slate-800 shadow-xl flex flex-col relative overflow-hidden ${
+                    isPortrait ? 'h-[60vh]' : 'min-h-0'
+                }`}>
                     <div className="flex-1 w-full h-full rounded-xl overflow-hidden bg-slate-950 relative">
                         {/* Canvas Container - Dedicated for Three.js */}
                         <div ref={canvasRef} className="absolute inset-0 w-full h-full" />

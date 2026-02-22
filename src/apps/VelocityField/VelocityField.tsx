@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, RefreshCw, HelpCircle, Layers, Settings, Activity, Gauge, ChevronDown } from 'lucide-react';
+import { Play, Pause, RefreshCw, HelpCircle, Layers, Settings, Activity, Gauge, ChevronDown, X } from 'lucide-react';
+import { useIsPortrait } from '../../hooks/useIsPortrait';
 
 // --- Math Parser Helper ---
 const evaluateMath = (expression: string, x: number, y: number, t: number) => {
@@ -102,6 +103,8 @@ const VelocityField = () => {
   // UI States
   const [showGuide, setShowGuide] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState("rotation");
+  const [configOpen, setConfigOpen] = useState(false);
+  const isPortrait = useIsPortrait();
 
   // Constants
   const BASE_DT = 0.015;
@@ -395,24 +398,36 @@ const VelocityField = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-[85vh] bg-slate-950 text-slate-200 font-sans overflow-hidden rounded-xl border border-slate-800 shadow-2xl">
+    <div className={`flex bg-slate-950 text-slate-200 font-sans overflow-hidden rounded-xl border border-slate-800 shadow-2xl h-full ${isPortrait ? 'flex-col' : 'flex-row'}`}>
       
+      {/* Portrait: Floating config toggle */}
+      {isPortrait && (
+        <button
+          onClick={() => setConfigOpen(!configOpen)}
+          className="fixed bottom-4 right-4 z-50 p-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full shadow-lg shadow-cyan-900/40 transition-all"
+        >
+          {configOpen ? <X size={22} /> : <Settings size={22} />}
+        </button>
+      )}
+
       {/* Sidebar */}
-      <div className="w-full md:w-80 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col z-10 shadow-xl">
+      <div className={`${isPortrait 
+        ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'}` 
+        : 'w-80 flex-shrink-0'} bg-slate-900 border-r border-slate-800 flex flex-col z-10 shadow-xl`}>
         
         {/* Header */}
-        <div className="p-5 border-b border-slate-800 bg-slate-900">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent flex items-center gap-2">
-            <Activity size={24} className="text-cyan-400" />
+        <div className="p-3 border-b border-slate-800 bg-slate-900">
+          <h1 className="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent flex items-center gap-2">
+            <Activity size={20} className="text-cyan-400" />
             Continuum Lab
           </h1>
-          <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-semibold">Visualizador de Fluidos 2D</p>
+          <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider font-semibold">Visualizador de Fluidos 2D</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
+        <div className="flex-1 p-3 space-y-3 custom-scrollbar">
           
           {/* Controls: Play & Speed */}
-          <div className="space-y-3">
+          <div className="space-y-2">
              <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setIsPlaying(!isPlaying)}
@@ -430,8 +445,8 @@ const VelocityField = () => {
              </div>
              
              {/* Speed Slider */}
-             <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
-               <div className="flex justify-between text-xs text-slate-400 mb-2">
+             <div className="bg-slate-800/50 p-2 rounded-md border border-slate-700/50">
+               <div className="flex justify-between text-xs text-slate-400 mb-1">
                  <span className="flex items-center gap-1"><Gauge size={12}/> Velocidad</span>
                  <span className="font-mono text-cyan-400">{simSpeed.toFixed(1)}x</span>
                </div>
@@ -442,14 +457,14 @@ const VelocityField = () => {
                  onChange={(e) => setSimSpeed(parseFloat(e.target.value))}
                  className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                />
-               <div className="mt-2 text-right font-mono text-xs text-slate-500">
+               <div className="mt-1 text-right font-mono text-xs text-slate-500">
                  t = {t.toFixed(2)}s
                </div>
              </div>
           </div>
 
           {/* Preset Dropdown */}
-          <div className="space-y-2">
+          <div className="space-y-1">
             <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
               <Settings size={14} /> Presets de Flujo
             </label>
@@ -471,7 +486,7 @@ const VelocityField = () => {
           </div>
 
           {/* Equation Input */}
-          <div className="space-y-3 pt-2 border-t border-slate-800">
+          <div className="space-y-2 pt-2 border-t border-slate-800">
             <div className="flex items-center justify-between">
                <label className="text-xs font-bold text-slate-500 uppercase">Definición Matemática</label>
             </div>
@@ -561,8 +576,13 @@ const VelocityField = () => {
         </div>
       </div>
 
+      {/* Portrait backdrop */}
+      {isPortrait && configOpen && (
+        <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setConfigOpen(false)} />
+      )}
+
       {/* Main Canvas Area */}
-      <div className="flex-1 relative flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 to-black">
+      <div className="flex-1 relative flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 to-black min-h-0">
         <canvas 
           ref={canvasRef}
           width={900}

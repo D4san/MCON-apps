@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RefreshCw, Square, Eraser, Info, MousePointer2 } from 'lucide-react';
+import { RefreshCw, Square, Eraser, Info, MousePointer2, Settings, X } from 'lucide-react';
+import { useIsPortrait } from '../../hooks/useIsPortrait';
 
 // --- Types ---
 interface Particle {
@@ -35,6 +36,8 @@ const DiscreteContinuous = () => {
     const [targetError, setTargetError] = useState(0.05);
     const [gameStatus, setGameStatus] = useState<GameStatus>('idle');
     const [feedback, setFeedback] = useState("Define un volumen para empezar...");
+    const [configOpen, setConfigOpen] = useState(false);
+    const isPortrait = useIsPortrait();
 
     // --- Refs (Simulation State) ---
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -381,16 +384,34 @@ const DiscreteContinuous = () => {
     }, [gameStatus, targetError]);
 
     return (
-        <div className="w-full text-slate-200 p-4 md:p-6 font-sans flex flex-col items-center">
+        <div className="w-full text-slate-200 font-sans flex flex-col items-center relative">
+            {/* Portrait: Floating config toggle */}
+            {isPortrait && (
+                <button
+                    onClick={() => setConfigOpen(!configOpen)}
+                    className="fixed bottom-4 right-4 z-50 p-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full shadow-lg shadow-cyan-900/40 transition-all"
+                >
+                    {configOpen ? <X size={22} /> : <Settings size={22} />}
+                </button>
+            )}
+
+            {/* Portrait backdrop */}
+            {isPortrait && configOpen && (
+                <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setConfigOpen(false)} />
+            )}
             
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-6">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mb-2 p-1">
                 Simulador Discreto-Continuo
             </h1>
 
-            <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+            <div className={`w-full max-w-7xl px-1 md:px-2 ${
+                isPortrait
+                    ? 'flex flex-col gap-3'
+                    : 'grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-3 h-[calc(100%-2.5rem)]'
+            }`}>
                 
                 {/* Visualizer Area */}
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 min-h-0">
                     <div className="relative w-full bg-slate-900 rounded-xl border border-slate-800 shadow-xl overflow-hidden cursor-crosshair touch-none"
                          onMouseDown={handleMouseDown}
                          onMouseMove={handleMouseMove}
@@ -411,11 +432,15 @@ const DiscreteContinuous = () => {
                 </div>
 
                 {/* Controls Sidebar */}
-                <div className="flex flex-col gap-6">
+                <div className={`flex flex-col gap-3 ${
+                    isPortrait
+                        ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} bg-slate-950 p-4 rounded-t-2xl border-t border-slate-800`
+                        : 'min-h-0'
+                }`}>
                     
                     {/* Params */}
-                    <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-lg space-y-4">
-                        <h3 className="font-bold text-slate-300 flex items-center gap-2"><Square size={16}/> Parámetros</h3>
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg space-y-3">
+                        <h3 className="font-bold text-sm text-slate-300 flex items-center gap-2"><Square size={16}/> Parámetros</h3>
                         
                         <div>
                             <div className="flex justify-between text-xs text-slate-400 mb-1">
@@ -444,8 +469,8 @@ const DiscreteContinuous = () => {
                     </div>
 
                     {/* Game Mode */}
-                    <div className="bg-slate-900 p-5 rounded-xl border border-slate-800 shadow-lg space-y-4">
-                        <h3 className="font-bold text-slate-300 flex items-center gap-2"><Info size={16}/> Desafío de Estabilidad</h3>
+                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow-lg space-y-3">
+                        <h3 className="font-bold text-sm text-slate-300 flex items-center gap-2"><Info size={16}/> Desafío de Estabilidad</h3>
                         
                         <div>
                             <label className="text-xs text-slate-400 block mb-1">Margen de Error Permitido</label>
@@ -470,7 +495,7 @@ const DiscreteContinuous = () => {
                     </div>
 
                     {/* Legend */}
-                    <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800/50 text-xs text-slate-400 space-y-2">
+                    <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800/50 text-xs text-slate-400 space-y-1">
                         <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-cyan-400"/> Densidad Instantánea (Volumen)</div>
                         <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-400"/> Densidad Promedio Global</div>
                         <div className="mt-2 text-[10px] text-slate-500 text-center italic">Gráfico visible en esquinas del simulador</div>
