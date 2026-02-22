@@ -366,7 +366,7 @@ const DiscreteContinuous = () => {
             if (canvasRef.current && canvasRef.current.parentElement) {
                 const p = canvasRef.current.parentElement;
                 canvasRef.current.width = p.clientWidth;
-                canvasRef.current.height = p.clientWidth * 0.75; // 4:3 ratio
+                canvasRef.current.height = p.clientHeight; // Fill container exactly
                 initSimulation(); // re-init on resize
             }
         };
@@ -384,7 +384,7 @@ const DiscreteContinuous = () => {
     }, [gameStatus, targetError]);
 
     return (
-        <div className="w-full text-slate-200 font-sans flex flex-col items-center relative">
+        <div className="w-full h-full text-slate-200 font-sans flex flex-col items-center relative min-h-0">
             {/* Portrait: Floating config toggle */}
             {isPortrait && (
                 <button
@@ -404,15 +404,15 @@ const DiscreteContinuous = () => {
                 Simulador Discreto-Continuo
             </h1>
 
-            <div className={`w-full max-w-7xl px-1 md:px-2 ${
+            <div className={`flex-1 min-h-0 w-full max-w-7xl px-1 md:px-2 ${
                 isPortrait
-                    ? 'flex flex-col gap-3'
-                    : 'grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-3 h-[calc(100%-2.5rem)]'
+                    ? 'flex flex-col gap-3 overflow-y-auto custom-scrollbar'
+                    : 'grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-3 h-full'
             }`}>
                 
                 {/* Visualizer Area */}
-                <div className="flex flex-col gap-3 min-h-0">
-                    <div className="relative w-full bg-slate-900 rounded-xl border border-slate-800 shadow-xl overflow-hidden cursor-crosshair touch-none"
+                <div className="flex-1 min-h-0 flex flex-col gap-3">
+                    <div className="flex-1 min-h-0 relative w-full bg-slate-900 rounded-xl border border-slate-800 shadow-xl overflow-hidden cursor-crosshair touch-none"
                          onMouseDown={handleMouseDown}
                          onMouseMove={handleMouseMove}
                          onMouseUp={handleMouseUp}
@@ -432,10 +432,10 @@ const DiscreteContinuous = () => {
                 </div>
 
                 {/* Controls Sidebar */}
-                <div className={`flex flex-col gap-3 ${
+                <div className={`flex flex-col gap-3 shrink-0 ${
                     isPortrait
                         ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} bg-slate-950 p-4 rounded-t-2xl border-t border-slate-800`
-                        : 'min-h-0'
+                        : 'min-h-0 overflow-y-auto custom-scrollbar pr-1'
                 }`}>
                     
                     {/* Params */}

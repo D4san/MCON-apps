@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, RotateCcw, ArrowRight } from 'lucide-react';
-import { useIsPortrait } from '../../hooks/useIsPortrait';
 
 // --- Types ---
 interface Particle {
@@ -45,7 +44,6 @@ const MeanFreePath = () => {
     });
     const [results, setResults] = useState<GameResults>({ collisions: 0, distance: 0, mfp: 0 });
     const [liveCollisions, setLiveCollisions] = useState(0);
-    const isPortrait = useIsPortrait();
 
     // --- Refs ---
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -346,7 +344,7 @@ const MeanFreePath = () => {
             if (canvasRef.current && canvasRef.current.parentElement) {
                 const w = canvasRef.current.parentElement.clientWidth;
                 canvasRef.current.width = w;
-                canvasRef.current.height = w * 0.75;
+                canvasRef.current.height = canvasRef.current.parentElement.clientHeight;
                 if (gameState === 'setup') initPreview();
             }
         };
@@ -356,8 +354,8 @@ const MeanFreePath = () => {
     }, [gameState, initPreview]);
 
     return (
-        <div className="w-full text-slate-200 p-2 md:p-4 font-sans flex flex-col items-center">
-             <div className="w-full max-w-4xl flex items-center justify-between mb-2 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+        <div className="w-full h-full flex flex-col min-h-0 text-slate-200 p-2 md:p-4 font-sans items-center relative">
+             <div className="shrink-0 w-full max-w-4xl flex items-center justify-between mb-2 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent flex items-center gap-2">
                     <ArrowRight className="text-green-400"/> Camino Libre Medio
                 </h1>
@@ -368,9 +366,7 @@ const MeanFreePath = () => {
                 )}
             </div>
 
-            <div className={`relative w-full max-w-4xl bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden ${
-                isPortrait ? 'aspect-[3/4]' : 'aspect-[4/3] max-h-[calc(100vh-10rem)]'
-            }`}>
+            <div className={`flex-1 min-h-0 relative w-full max-w-4xl bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden`}>
                 <canvas ref={canvasRef} className="block w-full h-full" />
 
                 {/* Setup Screen */}
@@ -451,7 +447,7 @@ const MeanFreePath = () => {
             </div>
             
             {gameState !== 'setup' && (
-                 <button onClick={() => setGameState('setup')} className="mt-6 text-slate-500 hover:text-slate-300 text-sm flex items-center gap-2 transition-colors">
+                 <button onClick={() => setGameState('setup')} className="shrink-0 mt-4 text-slate-500 hover:text-slate-300 text-sm flex items-center gap-2 transition-colors">
                     <RotateCcw size={14}/> Salir al Menú
                  </button>
             )}

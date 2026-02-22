@@ -398,7 +398,7 @@ const VelocityField = () => {
   };
 
   return (
-    <div className={`flex bg-slate-950 text-slate-200 font-sans overflow-hidden rounded-xl border border-slate-800 shadow-2xl h-full ${isPortrait ? 'flex-col' : 'flex-row'}`}>
+    <div className={`w-full h-full flex bg-slate-950 text-slate-200 font-sans overflow-hidden rounded-xl border border-slate-800 shadow-2xl ${isPortrait ? 'flex-col' : 'flex-row'}`}>
       
       {/* Portrait: Floating config toggle */}
       {isPortrait && (
@@ -424,7 +424,7 @@ const VelocityField = () => {
           <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider font-semibold">Visualizador de Fluidos 2D</p>
         </div>
 
-        <div className="flex-1 p-3 space-y-3 custom-scrollbar">
+        <div className="flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar">
           
           {/* Controls: Play & Speed */}
           <div className="space-y-2">

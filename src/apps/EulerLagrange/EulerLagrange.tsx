@@ -424,7 +424,7 @@ const EulerLagrange = () => {
             if (canvasRef.current && canvasRef.current.parentElement) {
                 const w = canvasRef.current.parentElement.clientWidth;
                 canvasRef.current.width = w;
-                canvasRef.current.height = w * (9/16); // 16:9
+                canvasRef.current.height = canvasRef.current.parentElement.clientHeight;
             }
         };
         handleResize();
@@ -457,7 +457,7 @@ const EulerLagrange = () => {
     };
 
     return (
-        <div className="w-full text-slate-200 font-sans relative">
+        <div className="w-full h-full flex flex-col min-h-0 text-slate-200 font-sans relative">
             {/* Portrait: Floating config toggle */}
             {isPortrait && (
                 <button
@@ -473,16 +473,16 @@ const EulerLagrange = () => {
                 <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setConfigOpen(false)} />
             )}
 
-             <div className={`max-w-7xl mx-auto p-1 md:p-2 ${
+             <div className={`flex-1 min-h-0 max-w-7xl w-full mx-auto p-1 md:p-2 ${
                 isPortrait
-                    ? 'flex flex-col gap-3'
+                    ? 'flex flex-col gap-3 overflow-y-auto custom-scrollbar'
                     : 'grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3 h-full'
              }`}>
                 
                 {/* Main Area */}
-                <div className="flex flex-col gap-2 min-h-0">
+                <div className="flex-1 flex flex-col gap-2 min-h-0">
                     {/* Top Controls */}
-                    <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 flex flex-wrap gap-3 items-center justify-between">
+                    <div className="shrink-0 bg-slate-900 p-3 rounded-xl border border-slate-800 flex flex-wrap gap-3 items-center justify-between">
                          <div className="flex items-center gap-3">
                             <label className="font-bold text-slate-400 text-sm">Flujo:</label>
                             <select 
@@ -519,7 +519,7 @@ const EulerLagrange = () => {
                     </div>
 
                     {/* Canvas */}
-                    <div className="relative w-full aspect-video bg-black rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
+                    <div className="flex-1 min-h-0 relative w-full bg-black rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
                         <canvas ref={canvasRef} 
                             onClick={handleCanvasClick}
                             className={`w-full h-full block ${followMode==='awaiting' ? 'cursor-crosshair' : 'cursor-default'}`} 
@@ -547,7 +547,7 @@ const EulerLagrange = () => {
                     </div>
                     
                     {/* Bottom Controls */}
-                    <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center gap-4">
+                    <div className="shrink-0 bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center gap-4">
                         <button onClick={() => setIsPlaying(!isPlaying)} className="p-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors">
                             {isPlaying ? <Pause size={20}/> : <Play size={20}/>}
                         </button>
@@ -579,10 +579,10 @@ const EulerLagrange = () => {
                 </div>
 
                 {/* Sidebar */}
-                <div className={`flex flex-col gap-3 ${
+                <div className={`flex flex-col gap-3 shrink-0 ${
                     isPortrait
                         ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} bg-slate-950 p-4 rounded-t-2xl border-t border-slate-800`
-                        : 'min-h-0'
+                        : 'min-h-0 overflow-y-auto custom-scrollbar pr-1'
                 }`}>
                     
                     {/* Info */}

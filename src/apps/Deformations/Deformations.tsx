@@ -439,7 +439,7 @@ const Deformations = () => {
     };
 
     return (
-        <div className="w-full text-slate-200 font-sans relative">
+        <div className="w-full h-full flex flex-col min-h-0 text-slate-200 font-sans relative">
             {/* Portrait: Floating config toggle */}
             {isPortrait && (
                 <button
@@ -455,19 +455,19 @@ const Deformations = () => {
                 <div className="fixed inset-0 bg-black/50 z-30" onClick={() => setConfigOpen(false)} />
             )}
 
-            <div className={`max-w-7xl mx-auto gap-3 p-1 md:p-2 ${
+            <div className={`flex-1 min-h-0 w-full max-w-7xl mx-auto gap-3 p-1 md:p-2 ${
                 isPortrait 
-                    ? 'flex flex-col' 
+                    ? 'flex flex-col overflow-y-auto custom-scrollbar' 
                     : 'grid grid-cols-1 lg:grid-cols-2 gap-3 h-full'
             }`}>
                 
                 {/* Control Panel */}
-                <div className={`bg-slate-900 p-3 rounded-2xl border border-slate-800 shadow-xl space-y-2 ${
+                <div className={`bg-slate-900 p-3 rounded-2xl border border-slate-800 shadow-xl space-y-2 shrink-0 ${
                     isPortrait 
                         ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} rounded-b-none` 
-                        : ''
+                        : 'flex flex-col min-h-0 overflow-y-auto custom-scrollbar'
                 }`}>
-                    <div className="border-b border-slate-800 pb-2">
+                    <div className="border-b border-slate-800 pb-2 shrink-0">
                         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent flex items-center gap-2">
                            <Activity className="text-blue-400" size={20}/> Calculadora de Deformación
                         </h1>
@@ -564,9 +564,9 @@ const Deformations = () => {
 
                 {/* Visualization Panel */}
                 <div className={`bg-slate-900 p-1 rounded-2xl border border-slate-800 shadow-xl flex flex-col relative overflow-hidden ${
-                    isPortrait ? 'h-[60vh]' : 'min-h-0'
+                    isPortrait ? 'h-[60vh] shrink-0' : 'flex-1 min-h-0'
                 }`}>
-                    <div className="flex-1 w-full h-full rounded-xl overflow-hidden bg-slate-950 relative">
+                    <div className="flex-1 min-h-0 w-full h-full rounded-xl overflow-hidden bg-slate-950 relative">
                         {/* Canvas Container - Dedicated for Three.js */}
                         <div ref={canvasRef} className="absolute inset-0 w-full h-full" />
                         
