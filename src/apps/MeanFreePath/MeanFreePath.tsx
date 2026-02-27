@@ -55,6 +55,8 @@ const MeanFreePath = () => {
     
     // Input
     const keysRef = useRef<{[key: string]: boolean}>({});
+    const touchInputRef = useRef({ up: false, down: false, left: false, right: false });
+    const collisionsRef = useRef(0);
 
     // --- Helpers ---
     const createParticle = (x: number, y: number, vx: number, vy: number, radius: number, color: string, isPlayer = false): Particle => ({
@@ -122,6 +124,7 @@ const MeanFreePath = () => {
         }
         particlesRef.current = particles;
 
+        collisionsRef.current = 0;
         setLiveCollisions(0);
         setGameState('playing');
     };
@@ -141,10 +144,11 @@ const MeanFreePath = () => {
         // Let's stick to original logic: Displacement.
         const dist = Math.sqrt((playerRef.current.x - startX)**2 + (playerRef.current.y - startY)**2);
         
-        const mfp = liveCollisions > 0 ? dist / liveCollisions : Infinity;
+        const currentCollisions = collisionsRef.current;
+        const mfp = currentCollisions > 0 ? dist / currentCollisions : Infinity;
 
         setResults({
-            collisions: liveCollisions,
+            collisions: currentCollisions,
             distance: parseFloat(dist.toFixed(1)),
             mfp: mfp === Infinity ? -1 : parseFloat(mfp.toFixed(2)) // -1 for Infinity
         });
@@ -178,43 +182,51 @@ const MeanFreePath = () => {
                 ctx.fillStyle = p.color;
                 ctx.fill();
             });
-        } else if (gameState === 'playing') {
-            // Game Mode
+        } else if (gameState === 'playing' || gameState === 'ended') {
+            // Game Mode (or frozen in background when ended)
             const player = playerRef.current;
             if (!player) return;
 
-            // 1. Player Input & Physics
-            let fx = 0, fy = 0;
-            if (keysRef.current['ArrowUp']) fy -= 1;
-            if (keysRef.current['ArrowDown']) fy += 1;
-            if (keysRef.current['ArrowLeft']) fx -= 1;
-            if (keysRef.current['ArrowRight']) fx += 1;
+            if (gameState === 'playing') {
+                // 1. Player Input & Physics
+                let fx = 0, fy = 0;
+                if (keysRef.current['ArrowUp'] || keysRef.current['w'] || keysRef.current['W']) fy -= 1;
+                if (keysRef.current['ArrowDown'] || keysRef.current['s'] || keysRef.current['S']) fy += 1;
+                if (keysRef.current['ArrowLeft'] || keysRef.current['a'] || keysRef.current['A']) fx -= 1;
+                if (keysRef.current['ArrowRight'] || keysRef.current['d'] || keysRef.current['D']) fx += 1;
+                if (touchInputRef.current.up) fy -= 1;
+                if (touchInputRef.current.down) fy += 1;
+                if (touchInputRef.current.left) fx -= 1;
+                if (touchInputRef.current.right) fx += 1;
 
-            const len = Math.sqrt(fx*fx + fy*fy);
-            if (len > 0) { fx /= len; fy /= len; }
-            
-            const forceMag = PLAYER_FORCE_BASE * (config.playerBoost ? 2 : 1);
-            player.vx += (fx / player.mass) * forceMag;
-            player.vy += (fy / player.mass) * forceMag;
-            
-            player.vx *= FRICTION;
-            player.vy *= FRICTION;
-            
-            player.x += player.vx;
-            player.y += player.vy;
-            
-            // Player Walls
-            if (player.x < player.radius) { player.vx *= -0.5; player.x = player.radius; }
-            if (player.x > width - player.radius) { player.vx *= -0.5; player.x = width - player.radius; }
-            if (player.y < player.radius) { player.vy *= -0.5; player.y = player.radius; }
-            if (player.y > height - player.radius) { player.vy *= -0.5; player.y = height - player.radius; }
+                const len = Math.sqrt(fx*fx + fy*fy);
+                if (len > 0) { fx /= len; fy /= len; }
+                
+                const forceMag = PLAYER_FORCE_BASE * (config.playerBoost ? 2 : 1);
+                player.vx += (fx / player.mass) * forceMag;
+                player.vy += (fy / player.mass) * forceMag;
+                
+                player.vx *= FRICTION;
+                player.vy *= FRICTION;
+                
+                player.x += player.vx;
+                player.y += player.vy;
+                
+                // Player Walls
+                if (player.x < player.radius) { player.vx *= -0.5; player.x = player.radius; }
+                if (player.x > width - player.radius) { player.vx *= -0.5; player.x = width - player.radius; }
+                if (player.y < player.radius) { player.vy *= -0.5; player.y = player.radius; }
+                if (player.y > height - player.radius) { player.vy *= -0.5; player.y = height - player.radius; }
+            }
 
             // 2. Obstacles
             particlesRef.current.forEach(p => {
-                p.x += p.vx;
-                p.y += p.vy;
-                if (p.x < p.radius || p.x > width - p.radius) { p.vx *= -1; p.x = Math.max(p.radius, Math.min(width - p.radius, p.x)); }
-                if (p.y < p.radius || p.y > height - p.radius) { p.vy *= -1; p.y = Math.max(p.radius, Math.min(height - p.radius, p.y)); }
+                if (gameState === 'playing') {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.x < p.radius || p.x > width - p.radius) { p.vx *= -1; p.x = Math.max(p.radius, Math.min(width - p.radius, p.x)); }
+                    if (p.y < p.radius || p.y > height - p.radius) { p.vy *= -1; p.y = Math.max(p.radius, Math.min(height - p.radius, p.y)); }
+                }
                 
                 // Draw Obstacle
                 ctx.beginPath();
@@ -222,40 +234,45 @@ const MeanFreePath = () => {
                 ctx.fillStyle = p.color;
                 ctx.fill();
 
-                // Collision Detection with Player
-                const dx = player.x - p.x;
-                const dy = player.y - p.y;
-                const distSq = dx*dx + dy*dy;
-                const minDist = player.radius + p.radius;
-                
-                if (distSq < minDist * minDist) {
-                    setLiveCollisions(c => c + 1);
+                if (gameState === 'playing') {
+                    // Collision Detection with Player
+                    const dx = player.x - p.x;
+                    const dy = player.y - p.y;
+                    const distSq = dx*dx + dy*dy;
+                    const minDist = player.radius + p.radius;
                     
-                    const dist = Math.sqrt(distSq);
-                    const nx = dx / dist; const ny = dy / dist;
-                    
-                    // Simple inelastic-ish impulse or just bounce
-                    // Original code had generic elastic collision response
-                    const dvx = player.vx - p.vx;
-                    const dvy = player.vy - p.vy;
-                    const dot = dvx * nx + dvy * ny;
-                    
-                    if (dot < 0) {
-                        const impulse = (2 * dot) / (player.mass + p.mass);
-                        const responseFactor = 0.25; // dampening
+                    if (distSq < minDist * minDist) {
+                        const dist = Math.sqrt(distSq);
+                        if (dist === 0) return; // Prevent division by zero
                         
-                        player.vx -= impulse * p.mass * nx * responseFactor;
-                        player.vy -= impulse * p.mass * ny * responseFactor;
-                        p.vx += impulse * player.mass * nx;
-                        p.vy += impulse * player.mass * ny;
+                        const nx = dx / dist; const ny = dy / dist;
                         
-                        // Separate
-                        const overlap = minDist - dist;
-                        const sep = 0.5;
-                        player.x += nx * overlap * sep;
-                        player.y += ny * overlap * sep;
-                        p.x -= nx * overlap * sep;
-                        p.y -= ny * overlap * sep;
+                        // Simple inelastic-ish impulse or just bounce
+                        // Original code had generic elastic collision response
+                        const dvx = player.vx - p.vx;
+                        const dvy = player.vy - p.vy;
+                        const dot = dvx * nx + dvy * ny;
+                        
+                        if (dot < 0) {
+                            collisionsRef.current += 1;
+                            setLiveCollisions(collisionsRef.current);
+                            
+                            const impulse = (2 * dot) / (player.mass + p.mass);
+                            const responseFactor = 0.25; // dampening
+                            
+                            player.vx -= impulse * p.mass * nx * responseFactor;
+                            player.vy -= impulse * p.mass * ny * responseFactor;
+                            p.vx += impulse * player.mass * nx;
+                            p.vy += impulse * player.mass * ny;
+                            
+                            // Separate
+                            const overlap = minDist - dist;
+                            const sep = 0.5;
+                            player.x += nx * overlap * sep;
+                            player.y += ny * overlap * sep;
+                            p.x -= nx * overlap * sep;
+                            p.y -= ny * overlap * sep;
+                        }
                     }
                 }
             });
@@ -282,35 +299,18 @@ const MeanFreePath = () => {
             ctx.fill();
 
             // 5. Check Win
-            if (player.x > goalX && player.y > goalY) {
+            if (gameState === 'playing' && player.x > goalX && player.y > goalY) {
                 endGame();
             }
         }
 
         requestRef.current = requestAnimationFrame(update);
-    }, [gameState, config, liveCollisions]); // liveCollisions as dependency might re-create loop too often? 
-    // Actually setLiveCollisions uses functional update, so we don't need it in dependency if we don't READ it inside loop (except for endGame calc, but endGame uses 'liveCollisions' state var).
-    // Wait, update captures 'liveCollisions' from closure. If we use setLiveCollisions(c=>c+1), it works.
-    // BUT endGame() uses liveCollisions value. If closure is stale, endGame sees old 0.
-    // Solution: Use a Ref for liveCollisions for the game logic, syncing State for UI.
-    
-    // Better Ref approach for stats:
-    const collisionsRef = useRef(0);
-    // Sync ref when state changes? Or just use Ref.
-    // Let's use Ref for logic, State for UI.
-    useEffect(() => { collisionsRef.current = liveCollisions; }, [liveCollisions]);
-    
-    // NOTE: In the loop above, I call setLiveCollisions. This triggers re-render, creating new 'update' function if deps change. 
-    // If I exclude 'liveCollisions' from deps, 'update' sees stale 'liveCollisions' state.
-    // If I use functional setState, it's fine for incrementing.
-    // But 'endGame' needs current value.
-    // FIX: Update 'endGame' to use a Ref or pass the value.
-    // I'll assume 'collisionsRef' tracks it.
+    }, [gameState, config]);
 
     // --- Inputs ---
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (gameState === 'playing' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            if (gameState === 'playing' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) {
                 e.preventDefault();
                 keysRef.current[e.key] = true;
             }
@@ -335,6 +335,12 @@ const MeanFreePath = () => {
     }, [update]);
 
     useEffect(() => {
+        if (gameState !== 'playing') {
+            touchInputRef.current = { up: false, down: false, left: false, right: false };
+        }
+    }, [gameState]);
+
+    useEffect(() => {
         if (gameState === 'setup') initPreview();
     }, [gameState, initPreview]);
     
@@ -354,9 +360,9 @@ const MeanFreePath = () => {
     }, [gameState, initPreview]);
 
     return (
-        <div className="w-full h-full flex flex-col min-h-0 text-slate-200 p-2 md:p-4 font-sans items-center relative">
-             <div className="shrink-0 w-full max-w-4xl flex items-center justify-between mb-2 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent flex items-center gap-2">
+        <div className="w-full flex-1 flex flex-col min-h-0 text-slate-200 p-2 md:p-4 font-sans items-center relative">
+             <div className="shrink-0 w-full max-w-4xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 bg-slate-900/50 p-3 rounded-xl border border-slate-800">
+                <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent flex items-center gap-2">
                     <ArrowRight className="text-green-400"/> Camino Libre Medio
                 </h1>
                 {gameState === 'playing' && (
@@ -371,9 +377,9 @@ const MeanFreePath = () => {
 
                 {/* Setup Screen */}
                 {gameState === 'setup' && (
-                    <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6">
-                        <div className="bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-2xl max-w-sm w-full space-y-6">
-                            <h2 className="text-2xl font-bold text-center text-white mb-2">Configurar Viaje</h2>
+                    <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-6">
+                        <div className="bg-slate-800 p-5 md:p-8 rounded-2xl border border-slate-700 shadow-2xl max-w-sm w-full space-y-6">
+                            <h2 className="text-xl md:text-2xl font-bold text-center text-white mb-2">Configurar Viaje</h2>
                             
                             <div className="space-y-4">
                                 <div>
@@ -383,7 +389,7 @@ const MeanFreePath = () => {
                                     </div>
                                     <input type="range" min="10" max="500" value={config.obstacleCount} 
                                         onChange={e => setConfig(c => ({...c, obstacleCount: parseInt(e.target.value)}))} 
-                                        className="w-full accent-blue-500"/>
+                                        className="w-full accent-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 rounded"/>
                                 </div>
                                 
                                 <div>
@@ -393,7 +399,7 @@ const MeanFreePath = () => {
                                     </div>
                                     <input type="range" min="0.5" max="5" step="0.1" value={config.obstacleSpeed}
                                          onChange={e => setConfig(c => ({...c, obstacleSpeed: parseFloat(e.target.value)}))}
-                                         className="w-full accent-blue-500"/>
+                                         className="w-full accent-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 rounded"/>
                                 </div>
 
                                 <label className="flex items-center gap-3 p-3 bg-slate-900 rounded-lg border border-slate-700 cursor-pointer hover:border-slate-600 transition">
@@ -409,7 +415,7 @@ const MeanFreePath = () => {
                             </button>
                             
                             <p className="text-xs text-center text-slate-500">
-                                Usa <span className="text-slate-300 font-mono">flechas</span> para mover tu partícula verde.
+                                Usa <span className="text-slate-300 font-mono">flechas</span> en PC o controles táctiles en móvil.
                             </p>
                         </div>
                     </div>
@@ -445,6 +451,66 @@ const MeanFreePath = () => {
                     </div>
                 )}
             </div>
+
+            {gameState === 'playing' && (
+                <div className="md:hidden mt-3 w-full max-w-4xl flex justify-center">
+                    <div className="grid grid-cols-3 grid-rows-3 gap-2 touch-none select-none">
+                        <div />
+                        <button
+                            type="button"
+                            aria-label="Mover arriba"
+                            onPointerDown={() => { touchInputRef.current.up = true; }}
+                            onPointerUp={() => { touchInputRef.current.up = false; }}
+                            onPointerLeave={() => { touchInputRef.current.up = false; }}
+                            onPointerCancel={() => { touchInputRef.current.up = false; }}
+                            className="h-12 w-12 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 active:bg-slate-700"
+                        >
+                            ↑
+                        </button>
+                        <div />
+
+                        <button
+                            type="button"
+                            aria-label="Mover izquierda"
+                            onPointerDown={() => { touchInputRef.current.left = true; }}
+                            onPointerUp={() => { touchInputRef.current.left = false; }}
+                            onPointerLeave={() => { touchInputRef.current.left = false; }}
+                            onPointerCancel={() => { touchInputRef.current.left = false; }}
+                            className="h-12 w-12 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 active:bg-slate-700"
+                        >
+                            ←
+                        </button>
+                        <div className="h-12 w-12 rounded-lg bg-slate-900/70 border border-slate-800 text-slate-500 grid place-items-center text-xs">
+                            Touch
+                        </div>
+                        <button
+                            type="button"
+                            aria-label="Mover derecha"
+                            onPointerDown={() => { touchInputRef.current.right = true; }}
+                            onPointerUp={() => { touchInputRef.current.right = false; }}
+                            onPointerLeave={() => { touchInputRef.current.right = false; }}
+                            onPointerCancel={() => { touchInputRef.current.right = false; }}
+                            className="h-12 w-12 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 active:bg-slate-700"
+                        >
+                            →
+                        </button>
+
+                        <div />
+                        <button
+                            type="button"
+                            aria-label="Mover abajo"
+                            onPointerDown={() => { touchInputRef.current.down = true; }}
+                            onPointerUp={() => { touchInputRef.current.down = false; }}
+                            onPointerLeave={() => { touchInputRef.current.down = false; }}
+                            onPointerCancel={() => { touchInputRef.current.down = false; }}
+                            className="h-12 w-12 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 active:bg-slate-700"
+                        >
+                            ↓
+                        </button>
+                        <div />
+                    </div>
+                </div>
+            )}
             
             {gameState !== 'setup' && (
                  <button onClick={() => setGameState('setup')} className="shrink-0 mt-4 text-slate-500 hover:text-slate-300 text-sm flex items-center gap-2 transition-colors">

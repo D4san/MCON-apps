@@ -457,12 +457,14 @@ const EulerLagrange = () => {
     };
 
     return (
-        <div className="w-full h-full flex flex-col min-h-0 text-slate-200 font-sans relative">
+        <div className="w-full flex-1 flex flex-col min-h-0 text-slate-200 font-sans relative">
             {/* Portrait: Floating config toggle */}
             {isPortrait && (
                 <button
                     onClick={() => setConfigOpen(!configOpen)}
-                    className="fixed bottom-4 right-4 z-50 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-900/40 transition-all"
+                    aria-label={configOpen ? 'Cerrar panel de configuración' : 'Abrir panel de configuración'}
+                    className="fixed right-4 z-50 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-900/40 transition-all"
+                    style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
                 >
                     {configOpen ? <X size={22} /> : <Settings size={22} />}
                 </button>
@@ -488,7 +490,7 @@ const EulerLagrange = () => {
                             <select 
                                 value={flowType} 
                                 onChange={e => setFlowType(e.target.value as FlowType)}
-                                className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm focus:border-blue-500"
+                                className="bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
                             >
                                 {Object.keys(FLOWS).map(k => <option key={k} value={k}>{k}</option>)}
                             </select>
@@ -572,7 +574,7 @@ const EulerLagrange = () => {
                             particlesRef.current = [];
                             followedParticleRef.current = null;
                             setFollowMode('none');
-                        }} className="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors">
+                        }} className="p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70" aria-label="Reiniciar simulación">
                             <RotateCcw size={20}/>
                         </button>
                     </div>
@@ -581,7 +583,7 @@ const EulerLagrange = () => {
                 {/* Sidebar */}
                 <div className={`flex flex-col gap-3 shrink-0 ${
                     isPortrait
-                        ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} bg-slate-950 p-4 rounded-t-2xl border-t border-slate-800`
+                        ? `fixed inset-x-0 bottom-0 z-40 max-h-[80dvh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} bg-slate-950 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] rounded-t-2xl border-t border-slate-800`
                         : 'min-h-0 overflow-y-auto custom-scrollbar pr-1'
                 }`}>
                     

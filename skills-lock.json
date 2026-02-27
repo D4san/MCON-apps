@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "education-learning": {
+      "source": "dylantarre/animation-principles",
+      "sourceType": "github",
+      "computedHash": "3100d428f4ab84d7427241b2893efaa0a9c9c5e86578e0918ea6db8cf9b1bb56"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "516bd2154eb843a8240e43d5b285229129853114ad7075a5e141e1c08e408c84"
+    },
+    "physics-simulation": {
+      "source": "omer-metin/skills-for-antigravity",
+      "sourceType": "github",
+      "computedHash": "b14d4bfb772a7574c39e283512976e0485380ca3322d3c65234e6436958aaf0a"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "d8e7d3afe37dcc8a97b99ffb5afdb4d0919ae0092ea8b68f44eb201f035e33ac"
+    }
+  }
+}

@@ -42,12 +42,22 @@ export const apps: AppDefinition[] = [
         color: "from-emerald-400 to-teal-500"
     },
     {
+        id: "hydrostatic-pressure",
+        title: "Presión Hidrostática",
+        description: "Explora cómo la presión en un fluido depende de la profundidad, la densidad y la gravedad. Dibuja tu propio tanque para comprobar la paradoja hidrostática.",
+        icon: Waves,
+        image: "/previews/hydrostatic.png",
+        url: "/apps/hydrostatic-pressure",
+        tags: ["Fluidos", "Presión", "Simulación"],
+        color: "from-cyan-400 to-blue-500"
+    },
+    {
         id: "meniscos",
         title: "Deducción de Menisco",
         description: "Derivación interactiva paso a paso de la ecuación del menisco capilar, con visualización del perfil y las fuerzas de tensión superficial.",
         icon: Waves,
         image: "/previews/meniscos.png",
-        url: "/apps/meniscos",
+        url: "/apps/meniscus",
         tags: ["Fluidos", "Tensión Superficial"],
         color: "from-blue-400 to-indigo-500"
     },

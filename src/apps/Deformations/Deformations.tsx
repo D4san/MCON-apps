@@ -439,12 +439,14 @@ const Deformations = () => {
     };
 
     return (
-        <div className="w-full h-full flex flex-col min-h-0 text-slate-200 font-sans relative">
+        <div className="w-full flex-1 flex flex-col min-h-0 text-slate-200 font-sans relative">
             {/* Portrait: Floating config toggle */}
             {isPortrait && (
                 <button
                     onClick={() => setConfigOpen(!configOpen)}
-                    className="fixed bottom-4 right-4 z-50 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-900/40 transition-all"
+                    aria-label={configOpen ? 'Cerrar panel de configuración' : 'Abrir panel de configuración'}
+                    className="fixed right-4 z-50 p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-900/40 transition-all"
+                    style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
                 >
                     {configOpen ? <X size={22} /> : <Settings size={22} />}
                 </button>
@@ -458,13 +460,13 @@ const Deformations = () => {
             <div className={`flex-1 min-h-0 w-full max-w-7xl mx-auto gap-3 p-1 md:p-2 ${
                 isPortrait 
                     ? 'flex flex-col overflow-y-auto custom-scrollbar' 
-                    : 'grid grid-cols-1 lg:grid-cols-2 gap-3 h-full'
+                    : 'grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-3 h-full'
             }`}>
                 
                 {/* Control Panel */}
                 <div className={`bg-slate-900 p-3 rounded-2xl border border-slate-800 shadow-xl space-y-2 shrink-0 ${
                     isPortrait 
-                        ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} rounded-b-none` 
+                        ? `fixed inset-x-0 bottom-0 z-40 max-h-[80dvh] pb-[max(1rem,env(safe-area-inset-bottom))] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} rounded-b-none` 
                         : 'flex flex-col min-h-0 overflow-y-auto custom-scrollbar'
                 }`}>
                     <div className="border-b border-slate-800 pb-2 shrink-0">
@@ -485,7 +487,7 @@ const Deformations = () => {
                             <select 
                                 value={selectedPreset}
                                 onChange={handlePresetChange}
-                                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-blue-500 transition-colors cursor-pointer text-slate-300"
+                                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm appearance-none focus:outline-none focus:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-400/70 transition-colors cursor-pointer text-slate-300"
                             >
                                 <option value="">-- Personalizado --</option>
                                 {Object.entries(PRESETS).map(([key, val]) => (
@@ -500,7 +502,7 @@ const Deformations = () => {
                     <div>
                         <button 
                             onClick={() => setShowHelp(!showHelp)}
-                            className="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium text-slate-400"
+                            className="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors text-sm font-medium text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
                         >
                             <span className="flex items-center gap-2"><HelpCircle size={16}/> Ayuda de Sintaxis</span>
                             <ChevronDown size={16} className={`transition-transform ${showHelp ? 'rotate-180' : ''}`}/>
@@ -527,7 +529,7 @@ const Deformations = () => {
                                <input 
                                  value={val}
                                  onChange={(e) => set(e.target.value)}
-                                 className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 font-mono text-sm focus:border-blue-500 focus:outline-none transition-colors text-slate-200"
+                                                                 className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 font-mono text-sm focus:border-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 transition-colors text-slate-200"
                                  placeholder="0"
                                />
                            </div>
@@ -537,7 +539,7 @@ const Deformations = () => {
                     <button 
                         onClick={handleCalculate}
                         disabled={loading}
-                        className="w-full py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        className="w-full py-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
                     >
                         {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Play size={18} fill="currentColor"/>}
                         {loading ? "Calculando..." : "Calcular y Visualizar"}
@@ -564,7 +566,7 @@ const Deformations = () => {
 
                 {/* Visualization Panel */}
                 <div className={`bg-slate-900 p-1 rounded-2xl border border-slate-800 shadow-xl flex flex-col relative overflow-hidden ${
-                    isPortrait ? 'h-[60vh] shrink-0' : 'flex-1 min-h-0'
+                    isPortrait ? 'h-[60vh] shrink-0' : 'flex-1 min-h-[300px]'
                 }`}>
                     <div className="flex-1 min-h-0 w-full h-full rounded-xl overflow-hidden bg-slate-950 relative">
                         {/* Canvas Container - Dedicated for Three.js */}

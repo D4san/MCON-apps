@@ -384,12 +384,14 @@ const DiscreteContinuous = () => {
     }, [gameStatus, targetError]);
 
     return (
-        <div className="w-full h-full text-slate-200 font-sans flex flex-col items-center relative min-h-0">
+        <div className="w-full flex-1 flex flex-col text-slate-200 font-sans items-center relative min-h-0">
             {/* Portrait: Floating config toggle */}
             {isPortrait && (
                 <button
                     onClick={() => setConfigOpen(!configOpen)}
-                    className="fixed bottom-4 right-4 z-50 p-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full shadow-lg shadow-cyan-900/40 transition-all"
+                    aria-label={configOpen ? 'Cerrar panel de configuración' : 'Abrir panel de configuración'}
+                    className="fixed right-4 z-50 p-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full shadow-lg shadow-cyan-900/40 transition-all"
+                    style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
                 >
                     {configOpen ? <X size={22} /> : <Settings size={22} />}
                 </button>
@@ -407,7 +409,7 @@ const DiscreteContinuous = () => {
             <div className={`flex-1 min-h-0 w-full max-w-7xl px-1 md:px-2 ${
                 isPortrait
                     ? 'flex flex-col gap-3 overflow-y-auto custom-scrollbar'
-                    : 'grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-3 h-full'
+                    : 'grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3 h-full'
             }`}>
                 
                 {/* Visualizer Area */}
@@ -434,7 +436,7 @@ const DiscreteContinuous = () => {
                 {/* Controls Sidebar */}
                 <div className={`flex flex-col gap-3 shrink-0 ${
                     isPortrait
-                        ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} bg-slate-950 p-4 rounded-t-2xl border-t border-slate-800`
+                        ? `fixed inset-x-0 bottom-0 z-40 max-h-[80dvh] overflow-y-auto transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'} bg-slate-950 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] rounded-t-2xl border-t border-slate-800`
                         : 'min-h-0 overflow-y-auto custom-scrollbar pr-1'
                 }`}>
                     
@@ -459,10 +461,10 @@ const DiscreteContinuous = () => {
                         </div>
 
                         <div className="flex gap-2">
-                            <button onClick={initSimulation} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors text-slate-300 font-medium flex justify-center items-center gap-2">
+                            <button onClick={initSimulation} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors text-slate-300 font-medium flex justify-center items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70">
                                 <RefreshCw size={14}/> Reiniciar
                             </button>
-                            <button onClick={() => { volumeRef.current = null; setGameStatus('idle'); }} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors text-slate-300 font-medium flex justify-center items-center gap-2">
+                            <button onClick={() => { volumeRef.current = null; setGameStatus('idle'); }} className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors text-slate-300 font-medium flex justify-center items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70">
                                 <Eraser size={14}/> Limpiar
                             </button>
                         </div>
@@ -477,7 +479,7 @@ const DiscreteContinuous = () => {
                             <select 
                                 value={targetError} 
                                 onChange={e => setTargetError(parseFloat(e.target.value))}
-                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-slate-300"
+                                className="w-full bg-slate-950 border border-slate-700 rounded p-2 text-sm text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
                             >
                                 <option value={0.1}>10% (Fácil)</option>
                                 <option value={0.05}>5% (Medio)</option>
@@ -498,7 +500,7 @@ const DiscreteContinuous = () => {
                     <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-800/50 text-xs text-slate-400 space-y-1">
                         <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-cyan-400"/> Densidad Instantánea (Volumen)</div>
                         <div className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-yellow-400"/> Densidad Promedio Global</div>
-                        <div className="mt-2 text-[10px] text-slate-500 text-center italic">Gráfico visible en esquinas del simulador</div>
+                        <div className="mt-2 text-[11px] text-slate-500 text-center italic">Gráfico visible en esquinas del simulador</div>
                     </div>
 
                 </div>

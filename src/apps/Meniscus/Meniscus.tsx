@@ -39,7 +39,7 @@ const Meniscus = () => {
     const section5Ref = useRef<HTMLDivElement>(null);
 
     return (
-        <div className="w-full text-slate-200 font-sans pb-8">
+        <div className="w-full flex-1 text-slate-200 font-sans pb-8">
             <div className="max-w-4xl mx-auto space-y-8">
 
                 {/* Header */}
@@ -57,7 +57,7 @@ const Meniscus = () => {
                         <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
                         El Fenómeno Físico
                     </h3>
-                    <p className="text-lg text-slate-300 mb-6">
+                    <p className="text-base md:text-lg text-slate-300 mb-6">
                         Cuando un líquido "trepa" por una pared, forma una curva llamada <strong>menisco</strong>. 
                         Esta forma es el resultado de un equilibrio perfecto entre fuerzas opuestas.
                     </p>
@@ -65,7 +65,7 @@ const Meniscus = () => {
                     {!showSection1 ? (
                         <button 
                             onClick={() => { setShowSection1(true); scrollToRef(section1Ref); }}
-                            className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 transition-all group border border-slate-700"
+                            className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 transition-all group border border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
                         >
                             <span>Revelar las fuerzas</span>
                             <ChevronDown className="group-hover:translate-y-1 transition-transform"/>
@@ -114,7 +114,7 @@ const Meniscus = () => {
                         <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
                         La Herramienta Geométrica
                     </h3>
-                    <p className="text-lg text-slate-300 mb-4">
+                    <p className="text-base md:text-lg text-slate-300 mb-4">
                         Necesitamos describir la curvatura <InlineEquation tex="\kappa"/> (inverso del radio <InlineEquation tex="R"/>).
                     </p>
                     <div className="bg-slate-800/50 p-2 rounded-lg border border-slate-700">
@@ -122,7 +122,7 @@ const Meniscus = () => {
                     </div>
 
                     <details className="group bg-slate-950/50 border border-slate-800 rounded-xl overflow-hidden mt-4">
-                        <summary className="font-bold text-slate-400 p-4 cursor-pointer hover:bg-slate-900 flex items-center justify-between select-none">
+                        <summary className="font-bold text-slate-400 p-4 cursor-pointer hover:bg-slate-900 flex items-center justify-between select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70">
                             <span>Deducción de la Curvatura (Opcional)</span>
                             <ChevronRight className="group-open:rotate-90 transition-transform text-slate-500"/>
                         </summary>
@@ -170,14 +170,14 @@ const Meniscus = () => {
                         <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
                         El Principio Físico
                     </h3>
-                    <p className="text-lg text-slate-300 mb-6">
+                    <p className="text-base md:text-lg text-slate-300 mb-6">
                         En cada punto, la presión hidrostática debe equilibrar la presión de tensión superficial (Ley de Laplace).
                     </p>
 
                     {!showSection3 ? (
                         <button 
                             onClick={() => { setShowSection3(true); scrollToRef(section3Ref); }}
-                            className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 transition-all group border border-slate-700"
+                            className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 transition-all group border border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
                         >
                             <span>Ver el balance</span>
                             <ChevronDown className="group-hover:translate-y-1 transition-transform"/>
@@ -230,7 +230,7 @@ const Meniscus = () => {
                         <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 w-8 h-8 rounded-full flex items-center justify-center text-sm">4</span>
                         La Síntesis Matemática
                     </h3>
-                    <p className="text-lg text-slate-300 mb-4">
+                    <p className="text-base md:text-lg text-slate-300 mb-4">
                         Unimos las ecuaciones. Sustituimos <InlineEquation tex="\kappa"/>:
                     </p>
                     <div className="bg-slate-800/50 p-2 rounded">
@@ -259,14 +259,14 @@ const Meniscus = () => {
                     {!showSection5 ? (
                         <button 
                             onClick={() => { setShowSection5(true); scrollToRef(section5Ref); }}
-                            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-emerald-900/20"
+                            className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-emerald-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
                         >
                             <span>Ver Resultado Final</span>
                             <Eye className="w-5 h-5"/>
                         </button>
                     ) : (
                         <div ref={section5Ref} className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                             <p className="text-lg text-slate-300">
+                             <p className="text-base md:text-lg text-slate-300">
                                  Usando la condición de borde (lejos de la pared, <InlineEquation tex="z=0, \theta=0 \implies C=-1"/>), obtenemos la altura en cualquier punto:
                              </p>
                              

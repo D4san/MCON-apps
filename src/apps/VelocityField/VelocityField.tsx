@@ -104,6 +104,7 @@ const VelocityField = () => {
   const [showGuide, setShowGuide] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState("rotation");
   const [configOpen, setConfigOpen] = useState(false);
+  const [canvasSize, setCanvasSize] = useState(720);
   const isPortrait = useIsPortrait();
 
   // Constants
@@ -111,6 +112,7 @@ const VelocityField = () => {
   
   // Canvas Refs
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number | null>(null);
   
   // Simulation Data Refs
@@ -383,6 +385,27 @@ const VelocityField = () => {
     };
   }, [animate]);
 
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      const { clientWidth, clientHeight } = container;
+      const next = Math.max(280, Math.floor(Math.min(clientWidth * 0.96, clientHeight * 0.96)));
+      setCanvasSize(next);
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(container);
+    window.addEventListener('orientationchange', updateSize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('orientationchange', updateSize);
+    };
+  }, []);
+
   // --- Handlers ---
   const handlePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const pid = e.target.value;
@@ -398,13 +421,15 @@ const VelocityField = () => {
   };
 
   return (
-    <div className={`w-full h-full flex bg-slate-950 text-slate-200 font-sans overflow-hidden rounded-xl border border-slate-800 shadow-2xl ${isPortrait ? 'flex-col' : 'flex-row'}`}>
+    <div className={`w-full flex-1 flex bg-slate-950 text-slate-200 font-sans overflow-hidden rounded-xl border border-slate-800 shadow-2xl ${isPortrait ? 'flex-col' : 'flex-row'}`}>
       
       {/* Portrait: Floating config toggle */}
       {isPortrait && (
         <button
           onClick={() => setConfigOpen(!configOpen)}
-          className="fixed bottom-4 right-4 z-50 p-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full shadow-lg shadow-cyan-900/40 transition-all"
+          aria-label={configOpen ? 'Cerrar panel de configuración' : 'Abrir panel de configuración'}
+          className="fixed right-4 z-50 p-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full shadow-lg shadow-cyan-900/40 transition-all"
+          style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
         >
           {configOpen ? <X size={22} /> : <Settings size={22} />}
         </button>
@@ -412,8 +437,8 @@ const VelocityField = () => {
 
       {/* Sidebar */}
       <div className={`${isPortrait 
-        ? `fixed inset-x-0 bottom-0 z-40 max-h-[75vh] transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'}` 
-        : 'w-80 flex-shrink-0'} bg-slate-900 border-r border-slate-800 flex flex-col z-10 shadow-xl`}>
+        ? `fixed inset-x-0 bottom-0 z-40 max-h-[80dvh] transform transition-transform duration-300 ease-in-out ${configOpen ? 'translate-y-0' : 'translate-y-full'}` 
+        : 'w-80 lg:w-96 flex-shrink-0'} bg-slate-900 border-r border-slate-800 flex flex-col z-10 shadow-xl`}>
         
         {/* Header */}
         <div className="p-3 border-b border-slate-800 bg-slate-900">
@@ -437,8 +462,9 @@ const VelocityField = () => {
                 </button>
                 <button 
                   onClick={() => { setT(0); streaksRef.current.forEach(s => s.emitted = []); }}
-                  className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-md transition-colors"
+                  className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
                   title="Reiniciar t=0"
+                  aria-label="Reiniciar tiempo"
                 >
                   <RefreshCw size={18} />
                 </button>
@@ -472,7 +498,7 @@ const VelocityField = () => {
               <select 
                 value={selectedPresetId}
                 onChange={handlePresetChange}
-                className="w-full bg-slate-800 text-slate-200 text-sm border border-slate-700 rounded-md p-2.5 appearance-none focus:outline-none focus:border-cyan-500 transition-colors cursor-pointer"
+                className="w-full bg-slate-800 text-slate-200 text-sm border border-slate-700 rounded-md p-2.5 appearance-none focus:outline-none focus:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition-colors cursor-pointer"
               >
                 {PRESETS.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -497,7 +523,7 @@ const VelocityField = () => {
                 <input 
                   value={uEq}
                   onChange={(e) => setUEq(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-md py-2 pl-10 pr-3 text-yellow-400 focus:border-rose-500 focus:outline-none transition-colors"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-md py-2 pl-10 pr-3 text-yellow-400 focus:border-rose-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/70 transition-colors"
                 />
               </div>
               <div className="group relative">
@@ -505,7 +531,7 @@ const VelocityField = () => {
                 <input 
                   value={vEq}
                   onChange={(e) => setVEq(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-md py-2 pl-10 pr-3 text-yellow-400 focus:border-cyan-500 focus:outline-none transition-colors"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-md py-2 pl-10 pr-3 text-yellow-400 focus:border-cyan-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 transition-colors"
                 />
               </div>
             </div>
@@ -522,6 +548,7 @@ const VelocityField = () => {
                 <div className="relative">
                   <button 
                     onClick={() => setShowGuide(!showGuide)}
+                    aria-label="Mostrar guía de capas"
                     className={`p-1 rounded-full transition-colors ${showGuide ? 'bg-cyan-500 text-white' : 'text-slate-500 hover:text-cyan-400'}`}
                   >
                     <HelpCircle size={16} />
@@ -582,12 +609,12 @@ const VelocityField = () => {
       )}
 
       {/* Main Canvas Area */}
-      <div className="flex-1 relative flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 to-black min-h-0">
+      <div ref={canvasContainerRef} className="flex-1 relative flex items-center justify-center bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 to-black min-h-0">
         <canvas 
           ref={canvasRef}
-          width={900}
-          height={900}
-          className="max-w-[95%] max-h-[95%] object-contain rounded shadow-2xl border border-slate-800"
+          width={canvasSize}
+          height={canvasSize}
+          className="w-auto h-auto max-w-[95%] max-h-[95%] object-contain rounded shadow-2xl border border-slate-800"
         />
         
         {/* Simple floating label for context */}
