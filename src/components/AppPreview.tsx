@@ -35,8 +35,8 @@ export function AppPreview({ appId, colorClass }: AppPreviewProps) {
                         {Array.from({ length: 20 }).map((_, i) => (
                             <div key={i} className="absolute w-2 h-2 rounded-full bg-slate-700/50 backdrop-blur-sm" 
                                  style={{ 
-                                     left: \`\${15 + (i * 27) % 70}%\`, 
-                                     top: \`\${10 + (i * 31) % 80}%\` 
+                                     left: `${15 + (i * 27) % 70}%`, 
+                                     top: `${10 + (i * 31) % 80}%` 
                                  }} 
                             />
                         ))}
@@ -152,7 +152,7 @@ export function AppPreview({ appId, colorClass }: AppPreviewProps) {
                             <div className="grid grid-cols-3 gap-5 opacity-70">
                                 {Array.from({ length: 9 }).map((_, i) => (
                                     <div key={i} className="w-1 h-1 rounded-full bg-purple-500 relative">
-                                        <div className="absolute top-1/2 left-1/2 w-5 h-0.5 bg-gradient-to-r from-purple-500 to-transparent origin-left -translate-y-1/2 animate-[spin_4s_linear_infinite]" style={{ animationDelay: \`\${i * 0.3}s\` }} />
+                                        <div className="absolute top-1/2 left-1/2 w-5 h-0.5 bg-gradient-to-r from-purple-500 to-transparent origin-left -translate-y-1/2 animate-[spin_4s_linear_infinite]" style={{ animationDelay: `${i * 0.3}s` }} />
                                     </div>
                                 ))}
                             </div>
