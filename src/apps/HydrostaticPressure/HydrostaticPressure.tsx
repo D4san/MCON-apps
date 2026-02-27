@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MousePointer2, Eraser, PenTool, GripHorizontal, ChevronDown, ChevronUp, Layers, Settings, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useIsPortrait } from '../../hooks/useIsPortrait';
-import { useIsPortrait } from '../../hooks/useIsPortrait';
 
 // --- Constants & Types ---
 const GRID_COLS = 30;
