@@ -11,19 +11,17 @@ export function AppCard({ app }: AppCardProps) {
     const isPlaceholder = app.isPlaceholder;
 
     return (
-        <motion.div
+        <motion.a
+            href={!isPlaceholder && app.url ? app.url : undefined}
+            target={!isPlaceholder && app.url ? "_blank" : undefined}
+            rel={!isPlaceholder && app.url ? "noopener noreferrer" : undefined}
             whileHover={!isPlaceholder ? { y: -5, boxShadow: "0 10px 30px -10px rgba(59, 130, 246, 0.5)" } : {}}
             transition={{ type: "spring", stiffness: 300 }}
             className={cn(
-                "group relative flex flex-col overflow-hidden rounded-xl border border-slate-700 bg-surface p-6 transition-colors",
+                "group relative flex flex-col overflow-hidden rounded-xl border border-slate-700 bg-surface p-6 transition-colors block text-left",
                 !isPlaceholder && "hover:border-primary/50 cursor-pointer",
                 isPlaceholder && "opacity-75 cursor-not-allowed border-dashed border-slate-700/50"
             )}
-            onClick={() => {
-                if (!isPlaceholder && app.url) {
-                    window.open(app.url, "_blank");
-                }
-            }}
         >
             <div className="mb-4 flex items-center justify-between">
                 <div className={cn(
@@ -63,6 +61,6 @@ export function AppCard({ app }: AppCardProps) {
             {!isPlaceholder && (
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
             )}
-        </motion.div>
+        </motion.a>
     );
 }

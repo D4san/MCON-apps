@@ -4,7 +4,8 @@ import {
     Waves, 
     Box, 
     Activity,
-    Route
+    Route,
+    Gauge
 } from "lucide-react";
 
 export interface AppDefinition {
@@ -45,8 +46,8 @@ export const apps: AppDefinition[] = [
         id: "hydrostatic-pressure",
         title: "Presión Hidrostática",
         description: "Explora cómo la presión en un fluido depende de la profundidad, la densidad y la gravedad. Dibuja tu propio tanque para comprobar la paradoja hidrostática.",
-        icon: Waves,
-        image: "/previews/hydrostatic.png",
+        icon: Gauge,
+        image: "/previews/presion.png",
         url: "/apps/hydrostatic-pressure",
         tags: ["Fluidos", "Presión", "Simulación"],
         color: "from-cyan-400 to-blue-500"

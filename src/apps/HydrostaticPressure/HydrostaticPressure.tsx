@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { MousePointer2, Eraser, PenTool, GripHorizontal, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import { MousePointer2, Eraser, PenTool, GripHorizontal, ChevronDown, ChevronUp, Layers, Settings, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useIsPortrait } from '../../hooks/useIsPortrait';
+import { useIsPortrait } from '../../hooks/useIsPortrait';
 
 // --- Constants & Types ---
 const GRID_COLS = 30;
@@ -61,6 +63,9 @@ export default function HydrostaticPressure() {
     const [isPropertiesCollapsed, setIsPropertiesCollapsed] = useState(false);
     const [showPressureField, setShowPressureField] = useState(false);
     
+    const isPortrait = useIsPortrait();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
     const [sensors, setSensors] = useState<Sensor[]>([
         { id: 's1', x: 5, y: 15, color: '#ef4444' }, // Red
         { id: 's2', x: 25, y: 15, color: '#22c55e' }  // Green
@@ -534,29 +539,139 @@ export default function HydrostaticPressure() {
                 
                 {/* Left: Sensor Readings */}
                 <div 
-                    className="absolute z-20 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl pointer-events-auto flex flex-col"
-                    style={{ left: panelsPos.readings.x, top: panelsPos.readings.y }}
+                    className={cn(
+                        "absolute z-20 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl p-3 sm:p-4 shadow-2xl pointer-events-auto flex flex-col",
+                        isPortrait ? "top-4 left-4" : ""
+                    )}
+                    style={isPortrait ? undefined : { left: panelsPos.readings.x, top: panelsPos.readings.y }}
                 >
                     <div 
-                        className="flex items-center justify-between mb-3 cursor-grab active:cursor-grabbing"
-                        onPointerDown={(e) => handlePanelDragStart(e, 'readings')}
+                        className={cn("flex items-center justify-between mb-2 sm:mb-3", !isPortrait && "cursor-grab active:cursor-grabbing")}
+                        onPointerDown={!isPortrait ? (e) => handlePanelDragStart(e, 'readings') : undefined}
                     >
-                        <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Lecturas de Presión</h3>
-                        <GripHorizontal size={14} className="text-slate-600" />
+                        <h3 className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest">Lecturas de Presión</h3>
+                        {!isPortrait && <GripHorizontal className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-600" />}
                     </div>
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-2 sm:gap-3">
                         {sensors.map(s => (
-                            <div key={s.id} className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" style={{ backgroundColor: s.color, boxShadow: `0 0 10px ${s.color}80` }} />
-                                <span className="font-mono text-lg font-bold text-white tracking-tight">
-                                    {getPressureAt(s.x, s.y).toFixed(1)} <span className="text-sm text-slate-400 font-sans font-normal">kPa</span>
+                            <div key={s.id} className="flex items-center gap-2 sm:gap-3">
+                                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" style={{ backgroundColor: s.color, boxShadow: `0 0 10px ${s.color}80` }} />
+                                <span className="font-mono text-base sm:text-lg font-bold text-white tracking-tight">
+                                    {getPressureAt(s.x, s.y).toFixed(1)} <span className="text-xs sm:text-sm text-slate-400 font-sans font-normal">kPa</span>
                                 </span>
                             </div>
                         ))}
                     </div>
                 </div>
+
+                {/* Mobile Settings Button */}
+                {isPortrait && (
+                    <button
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className="absolute top-4 right-4 z-30 p-3 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl text-slate-300 hover:text-white transition-colors"
+                        aria-label="Abrir configuración"
+                    >
+                        <Settings className="w-5 h-5" />
+                    </button>
+                )}
+
+                {/* Mobile Menu Drawer */}
+                {isPortrait && isMobileMenuOpen && (
+                    <div className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end pointer-events-auto">
+                        <div className="bg-slate-900 border-t border-white/10 rounded-t-2xl p-4 flex flex-col gap-4 animate-in slide-in-from-bottom-full duration-300">
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-sm font-bold text-white uppercase tracking-widest">Herramientas</h3>
+                                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-slate-400 hover:text-white transition-colors" aria-label="Cerrar menú">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            
+                            {/* Tools */}
+                            <div className="flex gap-2 justify-center bg-slate-950/50 p-2 rounded-xl border border-white/5">
+                                <button 
+                                    onClick={() => setToolMode('sensor')}
+                                    aria-label="Mover Sensores"
+                                    className={cn("p-3 rounded-lg transition-colors flex-1 flex justify-center", toolMode === 'sensor' ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400")}
+                                >
+                                    <MousePointer2 className="w-5 h-5" />
+                                </button>
+                                <button 
+                                    onClick={() => setToolMode('draw')}
+                                    aria-label="Dibujar Paredes"
+                                    className={cn("p-3 rounded-lg transition-colors flex-1 flex justify-center", toolMode === 'draw' ? "bg-emerald-500/20 text-emerald-300" : "text-slate-400")}
+                                >
+                                    <PenTool className="w-5 h-5" />
+                                </button>
+                                <button 
+                                    onClick={() => setToolMode('erase')}
+                                    aria-label="Borrar Paredes"
+                                    className={cn("p-3 rounded-lg transition-colors flex-1 flex justify-center", toolMode === 'erase' ? "bg-rose-500/20 text-rose-300" : "text-slate-400")}
+                                >
+                                    <Eraser className="w-5 h-5" />
+                                </button>
+                                <div className="w-px bg-white/10 mx-1 my-2" />
+                                <button 
+                                    onClick={() => setShowPressureField(!showPressureField)}
+                                    aria-label="Ver Campo de Presiones"
+                                    className={cn("p-3 rounded-lg transition-colors flex-1 flex justify-center", showPressureField ? "bg-purple-500/20 text-purple-300" : "text-slate-400")}
+                                >
+                                    <Layers className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Properties */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Fluido</label>
+                                    <select 
+                                        value={fluidType}
+                                        onChange={(e) => setFluidType(e.target.value as keyof typeof FLUIDS)}
+                                        className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-2.5 text-sm text-white focus:ring-1 focus:ring-cyan-500 outline-none"
+                                    >
+                                        {Object.entries(FLUIDS).map(([key, data]) => (
+                                            <option key={key} value={key}>{data.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gravedad</label>
+                                    <select 
+                                        value={gravityType}
+                                        onChange={(e) => setGravityType(e.target.value as keyof typeof GRAVITIES)}
+                                        className="w-full bg-slate-950/50 border border-white/10 rounded-lg p-2.5 text-sm text-white focus:ring-1 focus:ring-cyan-500 outline-none"
+                                    >
+                                        {Object.entries(GRAVITIES).map(([key, data]) => (
+                                            <option key={key} value={key}>{data.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => setIsOpenAtmosphere(!isOpenAtmosphere)}
+                                className={cn(
+                                    "w-full flex items-center justify-between p-3 rounded-lg border transition-colors",
+                                    isOpenAtmosphere 
+                                        ? "bg-blue-500/10 border-blue-500/30 text-blue-300" 
+                                        : "bg-slate-950/50 border-white/10 text-slate-400"
+                                )}
+                            >
+                                <span className="text-sm font-medium">{isOpenAtmosphere ? 'Tanque Abierto' : 'Tanque Cerrado'}</span>
+                                <div className={cn("w-8 h-4 rounded-full relative transition-colors", isOpenAtmosphere ? "bg-blue-500" : "bg-slate-600")}>
+                                    <div className={cn("absolute top-0.5 w-3 h-3 rounded-full bg-white transition-[left]", isOpenAtmosphere ? "left-4.5" : "left-0.5")} />
+                                </div>
+                            </button>
+
+                            {/* Equation */}
+                            <div className="text-center font-mono text-lg text-white tracking-wider py-2 border-t border-white/10 mt-2">
+                                P = P₀ + ρgh
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
-                {/* Right: Tools & Properties */}
+                {/* Desktop Tools & Properties */}
+                {!isPortrait && (
                 <div 
                     className="absolute z-20 flex flex-col gap-4 items-end pointer-events-auto"
                     style={{ left: panelsPos.tools.x, top: panelsPos.tools.y }}
@@ -566,44 +681,48 @@ export default function HydrostaticPressure() {
                         className="w-full flex justify-center bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-t-xl p-1 cursor-grab active:cursor-grabbing -mb-4 z-30"
                         onPointerDown={(e) => handlePanelDragStart(e, 'tools')}
                     >
-                        <GripHorizontal size={14} className="text-slate-600" />
+                        <GripHorizontal className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-600" />
                     </div>
                     
                     {/* Drawing Tools */}
-                    <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl rounded-tr-none p-2 shadow-2xl flex gap-1">
+                    <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl rounded-tr-none p-1.5 sm:p-2 shadow-2xl flex gap-1">
                         <button 
                             onClick={() => setToolMode('sensor')}
                             title="Mover Sensores"
-                            className={cn("p-3 rounded-lg transition-all", toolMode === 'sensor' ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:bg-white/5 hover:text-white")}
+                            aria-label="Mover Sensores"
+                            className={cn("p-2 sm:p-3 rounded-lg transition-colors", toolMode === 'sensor' ? "bg-cyan-500/20 text-cyan-300" : "text-slate-400 hover:bg-white/5 hover:text-white")}
                         >
-                            <MousePointer2 size={20} />
+                            <MousePointer2 className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                         <button 
                             onClick={() => setToolMode('draw')}
                             title="Dibujar Paredes"
-                            className={cn("p-3 rounded-lg transition-all", toolMode === 'draw' ? "bg-emerald-500/20 text-emerald-300" : "text-slate-400 hover:bg-white/5 hover:text-white")}
+                            aria-label="Dibujar Paredes"
+                            className={cn("p-2 sm:p-3 rounded-lg transition-colors", toolMode === 'draw' ? "bg-emerald-500/20 text-emerald-300" : "text-slate-400 hover:bg-white/5 hover:text-white")}
                         >
-                            <PenTool size={20} />
+                            <PenTool className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                         <button 
                             onClick={() => setToolMode('erase')}
                             title="Borrar Paredes"
-                            className={cn("p-3 rounded-lg transition-all", toolMode === 'erase' ? "bg-rose-500/20 text-rose-300" : "text-slate-400 hover:bg-white/5 hover:text-white")}
+                            aria-label="Borrar Paredes"
+                            className={cn("p-2 sm:p-3 rounded-lg transition-colors", toolMode === 'erase' ? "bg-rose-500/20 text-rose-300" : "text-slate-400 hover:bg-white/5 hover:text-white")}
                         >
-                            <Eraser size={20} />
+                            <Eraser className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
-                        <div className="w-px bg-white/10 mx-1 my-2" />
+                        <div className="w-px bg-white/10 mx-1 my-1 sm:my-2" />
                         <button 
                             onClick={() => setShowPressureField(!showPressureField)}
                             title="Ver Campo de Presiones"
-                            className={cn("p-3 rounded-lg transition-all", showPressureField ? "bg-purple-500/20 text-purple-300" : "text-slate-400 hover:bg-white/5 hover:text-white")}
+                            aria-label="Ver Campo de Presiones"
+                            className={cn("p-2 sm:p-3 rounded-lg transition-colors", showPressureField ? "bg-purple-500/20 text-purple-300" : "text-slate-400 hover:bg-white/5 hover:text-white")}
                         >
-                            <Layers size={20} />
+                            <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                     </div>
 
                     {/* Physics Properties Dropdowns */}
-                    <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl w-64 flex flex-col overflow-hidden transition-all duration-300">
+                    <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl w-56 sm:w-64 flex flex-col overflow-hidden transition-[height,opacity,transform] duration-300">
                         <button 
                             onClick={() => setIsPropertiesCollapsed(!isPropertiesCollapsed)}
                             className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors border-b border-white/5"
@@ -612,7 +731,7 @@ export default function HydrostaticPressure() {
                             {isPropertiesCollapsed ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}
                         </button>
                         
-                        <div className={cn("flex flex-col gap-4 p-4 transition-all duration-300 origin-top", isPropertiesCollapsed ? "h-0 p-0 opacity-0 scale-y-0" : "h-auto opacity-100 scale-y-100")}>
+                        <div className={cn("flex flex-col gap-4 p-4 transition-[height,opacity,transform,padding] duration-300 origin-top", isPropertiesCollapsed ? "h-0 p-0 opacity-0 scale-y-0" : "h-auto opacity-100 scale-y-100")}>
                             <div className="space-y-1.5">
                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex justify-between">
                                 <span>Fluido</span>
@@ -648,7 +767,7 @@ export default function HydrostaticPressure() {
                         <button
                             onClick={() => setIsOpenAtmosphere(!isOpenAtmosphere)}
                             className={cn(
-                                "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all mt-2",
+                                "w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors mt-2",
                                 isOpenAtmosphere 
                                     ? "bg-blue-500/10 border-blue-500/30 text-blue-300" 
                                     : "bg-slate-950/50 border-white/10 text-slate-400"
@@ -656,30 +775,33 @@ export default function HydrostaticPressure() {
                         >
                             <span className="text-xs font-medium">{isOpenAtmosphere ? 'Tanque Abierto' : 'Tanque Cerrado'}</span>
                             <div className={cn("w-7 h-3.5 rounded-full relative transition-colors", isOpenAtmosphere ? "bg-blue-500" : "bg-slate-600")}>
-                                <div className={cn("absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-all", isOpenAtmosphere ? "left-4" : "left-0.5")} />
+                                <div className={cn("absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-[left]", isOpenAtmosphere ? "left-4" : "left-0.5")} />
                             </div>
                         </button>
                         </div>
                     </div>
                 </div>
+                )}
 
-                {/* Equation Overlay */}
+                {/* Desktop Equation Overlay */}
+                {!isPortrait && (
                 <div 
                     className="absolute z-20 pointer-events-auto"
                     style={{ left: panelsPos.equation.x, top: panelsPos.equation.y }}
                 >
-                    <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl p-4 shadow-2xl flex flex-col">
+                    <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-xl p-3 sm:p-4 shadow-2xl flex flex-col">
                         <div 
-                            className="flex justify-center mb-2 cursor-grab active:cursor-grabbing"
+                            className="flex justify-center mb-1 sm:mb-2 cursor-grab active:cursor-grabbing"
                             onPointerDown={(e) => handlePanelDragStart(e, 'equation')}
                         >
-                            <GripHorizontal size={14} className="text-slate-600" />
+                            <GripHorizontal className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-600" />
                         </div>
-                        <div className="text-center font-mono text-xl text-white tracking-wider">
+                        <div className="text-center font-mono text-lg sm:text-xl text-white tracking-wider">
                             P = P₀ + ρgh
                         </div>
                     </div>
                 </div>
+                )}
 
                 {/* Canvas Container */}
                 <div 

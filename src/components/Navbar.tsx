@@ -34,7 +34,7 @@ export function Navbar() {
                     <Link to="/" className="flex items-center gap-2 sm:gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 rounded-lg">
                         <div className="relative flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
                              <div className="absolute inset-0 bg-blue-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full"></div>
-                            <img src="/logo.png" alt="MConHub Logo" className="h-10 sm:h-12 w-auto object-contain relative z-10" />
+                            <img src="/logo.png" alt="MConHub Logo" width={48} height={48} className="h-10 sm:h-12 w-auto object-contain relative z-10" />
                         </div>
                         <div className="flex flex-col">
                             <span className="text-base sm:text-lg font-bold tracking-tight text-white leading-none">
@@ -57,7 +57,7 @@ export function Navbar() {
                                 key={link.path}
                                 to={link.path}
                                 className={cn(
-                                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
+                                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
                                     isActive 
                                         ? "bg-white/10 text-white" 
                                         : "text-slate-400 hover:text-white hover:bg-white/5"
@@ -75,7 +75,7 @@ export function Navbar() {
                     <Link 
                         to="/"
                         className={cn(
-                            "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
+                            "hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70",
                             isHome 
                                 ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" 
                                 : "text-slate-400 hover:text-white hover:bg-white/5"
@@ -98,7 +98,7 @@ export function Navbar() {
 
                     {/* Mobile Menu Toggle */}
                     <button 
-                        className="lg:hidden flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 hover:from-blue-500/20 hover:to-cyan-500/20 border border-blue-500/20 text-blue-400 hover:text-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 rounded-full"
+                        className="lg:hidden flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 hover:from-blue-500/20 hover:to-cyan-500/20 border border-blue-500/20 text-blue-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 rounded-full"
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                     >
                         <span className="text-xs font-bold uppercase tracking-wider">Secciones</span>
@@ -120,7 +120,7 @@ export function Navbar() {
                                     to={link.path}
                                     onClick={() => setMobileMenuOpen(false)}
                                     className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
+                                        "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors",
                                         isActive 
                                             ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" 
                                             : "text-slate-300 hover:bg-slate-800"
@@ -135,7 +135,7 @@ export function Navbar() {
                         <Link 
                             to="/"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 transition-all"
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 transition-colors"
                         >
                             <Home className="w-5 h-5" />
                             Inicio
