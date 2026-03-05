@@ -18,162 +18,90 @@ const GRAVITY_REFS = [
     { name: 'Luna', g: 1.62 },
     { name: 'Marte', g: 3.72 },
     { name: 'Tierra', g: 9.81 },
-    { name: 'J\u00fapiter', g: 24.79 },
+    { name: 'Júpiter', g: 24.79 },
 ];
 const GRAVITY_MIN = 0.5;
 const GRAVITY_MAX = 28;
 
 // --- Types ---
 type ToolMode = 'draw' | 'erase' | 'sensor' | 'addWater' | 'removeWater';
+interface Sensor { id: string; x: number; y: number; color: string; }
+interface SimState { wallGrid: boolean[][]; }
 
-interface Sensor {
-    id: string;
-    x: number;
-    y: number;
-    color: string;
+// --- Column Physics Logic ---
+function getColumnSurface(c: number, vol: number, wallGrid: boolean[][]): number {
+    let rem = vol;
+    for (let r = GRID_ROWS - 1; r >= 0; r--) {
+        if (!wallGrid[r][c]) {
+            if (rem <= 0) return r + 1;
+            if (rem < 1) return r + 1 - rem;
+            rem -= 1;
+        }
+    }
+    return -rem; 
 }
 
-interface WallForceVector {
-    x: number;
-    y: number;
-    fx: number;
-    fy: number;
-    magnitude: number;
+function getColumnDepthAt(x: number, y: number, waterVols: Float32Array, wallGrid: boolean[][]): number {
+    const c = Math.floor(Math.max(0, Math.min(GRID_COLS - 1, x)));
+    const s = getColumnSurface(c, waterVols[c], wallGrid);
+    if (y > s && !wallGrid[Math.floor(y)][c]) return (y - s) * METERS_PER_CELL;
+    return 0;
 }
 
-interface WallArrowTarget {
-    startX: number;
-    startY: number;
-    endX: number;
-    endY: number;
-    magnitude: number;
+function getPressureKPa(x: number, y: number, waterVols: Float32Array, wallGrid: boolean[][], gravity: number, isOpen: boolean): number {
+    const p0 = isOpen ? ATM_PRESSURE : 0;
+    return p0 + (WATER_DENSITY * gravity * getColumnDepthAt(x, y, waterVols, wallGrid)) / 1000;
 }
 
-interface BasinProfile {
-    cells: Array<[number, number]>;
-    rowCounts: Map<number, number>;
-    sortedRows: number[]; // descending: bottom (highest row#) first
-    capacity: number;
-}
+// Tick simulation -> The physical engine that runs correctly!
+function tickFluid(waterVols: Float32Array, wallGrid: boolean[][]) {
+    const C = GRID_COLS, R = GRID_ROWS;
+    const surfaces = new Float32Array(C);
+    for(let c=0; c<C; c++) surfaces[c] = getColumnSurface(c, waterVols[c], wallGrid);
 
-interface SimState {
-    wallGrid: boolean[][];
-    basinLabels: number[][];
-    basinProfiles: BasinProfile[];
-    waterVolumes: number[];
-}
+    const newVols = new Float32Array(waterVols);
+    const maxFlow = 1.5; 
 
-// --- Utility ---
-const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+    for (let pass = 0; pass < 2; pass++) {
+        for (let baseC = 0; pass === 0 ? baseC < C - 1 : baseC > 0; pass === 0 ? baseC++ : baseC--) {
+            const c1 = pass === 0 ? baseC : baseC - 1;
+            const c2 = c1 + 1;
 
-const distancePointToSegment = (
-    px: number, py: number,
-    x1: number, y1: number,
-    x2: number, y2: number,
-) => {
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const lenSq = dx * dx + dy * dy;
-    if (lenSq === 0) return Math.hypot(px - x1, py - y1);
-    const t = clamp(((px - x1) * dx + (py - y1) * dy) / lenSq, 0, 1);
-    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
-};
+            const s1 = surfaces[c1];
+            const s2 = surfaces[c2];
+            
+            if (Math.abs(s1 - s2) > 0.005) {
+                const sourceC = s1 < s2 ? c1 : c2;
+                const destC = s1 < s2 ? c2 : c1;
+                const sSource = s1 < s2 ? s1 : s2;
+                const sDest = s1 < s2 ? s2 : s1;
+                
+                let connected = false;
+                for(let r = R - 1; r >= 0; r--) {
+                    if (!wallGrid[r][c1] && !wallGrid[r][c2]) {
+                        if (sSource <= r + 1.01) { connected = true; break; }
+                    }
+                }
 
-// --- Basin computation ---
-
-/** Identify connected regions of non-solid cells */
-function computeBasins(wallGrid: boolean[][]): { labels: number[][]; profiles: BasinProfile[] } {
-    const labels: number[][] = Array.from({ length: GRID_ROWS }, () => new Array(GRID_COLS).fill(-1));
-    const profiles: BasinProfile[] = [];
-
-    for (let r = 0; r < GRID_ROWS; r++) {
-        for (let c = 0; c < GRID_COLS; c++) {
-            if (wallGrid[r][c] || labels[r][c] !== -1) continue;
-            const id = profiles.length;
-            const cells: Array<[number, number]> = [];
-            const rowCounts = new Map<number, number>();
-            const queue: Array<[number, number]> = [[r, c]];
-            labels[r][c] = id;
-
-            while (queue.length > 0) {
-                const [cr, cc] = queue.pop()!;
-                cells.push([cr, cc]);
-                rowCounts.set(cr, (rowCounts.get(cr) ?? 0) + 1);
-                for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
-                    const nr = cr + dr;
-                    const nc = cc + dc;
-                    if (nr < 0 || nr >= GRID_ROWS || nc < 0 || nc >= GRID_COLS) continue;
-                    if (wallGrid[nr][nc] || labels[nr][nc] !== -1) continue;
-                    labels[nr][nc] = id;
-                    queue.push([nr, nc]);
+                if (connected) {
+                    let flow = (sDest - sSource) * 0.45;
+                    flow = Math.min(flow, newVols[sourceC]);
+                    flow = Math.min(flow, maxFlow);
+                    
+                    if (flow > 0) {
+                        newVols[sourceC] -= flow;
+                        newVols[destC] += flow;
+                        surfaces[sourceC] = getColumnSurface(sourceC, newVols[sourceC], wallGrid);
+                        surfaces[destC] = getColumnSurface(destC, newVols[destC], wallGrid);
+                    }
                 }
             }
-
-            const sortedRows = [...rowCounts.keys()].sort((a, b) => b - a);
-            profiles.push({ cells, rowCounts, sortedRows, capacity: cells.length });
         }
     }
-
-    return { labels, profiles };
+    for(let c=0; c<C; c++) waterVols[c] = newVols[c];
 }
 
-/**
- * Compute the Y coordinate of the water surface for a basin given its volume.
- * Water fills from bottom (highest row number) upward.
- * Returns a fractional Y in grid coordinates.  Values >= GRID_ROWS mean no visible water.
- */
-function computeWaterSurface(profile: BasinProfile, volume: number): number {
-    if (volume <= 0 || profile.sortedRows.length === 0) return GRID_ROWS + 1;
-    let remaining = Math.min(volume, profile.capacity);
-
-    for (const row of profile.sortedRows) {
-        const count = profile.rowCounts.get(row)!;
-        if (remaining >= count) {
-            remaining -= count;
-            if (remaining <= 0) return row; // surface at top edge of this row
-        } else {
-            return row + (1 - remaining / count); // fractional surface within this row
-        }
-    }
-    // Basin fully filled
-    return profile.sortedRows[profile.sortedRows.length - 1];
-}
-
-/**
- * When walls change, redistribute water volumes from old basins to new basins.
- * For each new basin cell, check how much water it held in the old state.
- */
-function redistributeVolumes(
-    newBasins: { labels: number[][]; profiles: BasinProfile[] },
-    oldLabels: number[][],
-    oldProfiles: BasinProfile[],
-    oldVolumes: number[],
-): number[] {
-    const oldSurfaces = oldVolumes.map((v, i) =>
-        i < oldProfiles.length ? computeWaterSurface(oldProfiles[i], v) : GRID_ROWS + 1,
-    );
-    const newVolumes = new Array(newBasins.profiles.length).fill(0);
-
-    for (let bid = 0; bid < newBasins.profiles.length; bid++) {
-        for (const [r, c] of newBasins.profiles[bid].cells) {
-            const oldBid = oldLabels[r]?.[c];
-            if (oldBid == null || oldBid === -1) continue;
-            const surface = oldSurfaces[oldBid];
-            if (surface >= r + 1) continue; // was above water
-            if (surface <= r) {
-                newVolumes[bid] += 1; // fully submerged
-            } else {
-                newVolumes[bid] += (r + 1 - surface); // partial
-            }
-        }
-        newVolumes[bid] = Math.min(newVolumes[bid], newBasins.profiles[bid].capacity);
-    }
-
-    return newVolumes;
-}
-
-// --- Initial state ---
-
+// Initial state
 function createInitialWallGrid(): boolean[][] {
     const grid: boolean[][] = Array.from({ length: GRID_ROWS }, () => new Array(GRID_COLS).fill(false));
     for (let r = 0; r < GRID_ROWS; r++) {
@@ -181,97 +109,35 @@ function createInitialWallGrid(): boolean[][] {
             if (c === 0 || c === GRID_COLS - 1 || r === GRID_ROWS - 1) grid[r][c] = true;
         }
     }
-    // Central divider (full height, 1 cell wide)
-    for (let r = 0; r < GRID_ROWS - 1; r++) {
-        grid[r][15] = true;
-    }
+    for (let r = 0; r < GRID_ROWS - 1; r++) grid[r][15] = true;
     return grid;
 }
 
-function createInitialState(): SimState {
-    const wallGrid = createInitialWallGrid();
-    const { labels, profiles } = computeBasins(wallGrid);
-    const waterVolumes = profiles.map((profile) => {
-        let vol = 0;
-        for (const [r] of profile.cells) {
-            if (r >= DEFAULT_FLUID_SURFACE) vol++;
-        }
-        return vol;
-    });
-    return { wallGrid, basinLabels: labels, basinProfiles: profiles, waterVolumes };
+function computeCapacity(c: number, wallGrid: boolean[][]): number {
+    let cap = 0;
+    for (let r = 0; r < GRID_ROWS; r++) if (!wallGrid[r][c]) cap++;
+    return cap;
 }
-
-// --- Physics ---
-
-function getGaugePressurePa(
-    x: number, y: number,
-    basinLabels: number[][],
-    waterSurfaces: number[],
-    gravity: number,
-): number {
-    const r = Math.floor(y);
-    const c = Math.floor(x);
-    if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return 0;
-    const bid = basinLabels[r][c];
-    if (bid === -1 || bid >= waterSurfaces.length) return 0;
-    const surface = waterSurfaces[bid];
-    if (y <= surface) return 0;
-    return WATER_DENSITY * gravity * (y - surface) * METERS_PER_CELL;
-}
-
-function getPressureKPa(
-    x: number, y: number,
-    basinLabels: number[][],
-    waterSurfaces: number[],
-    gravity: number,
-    isOpenAtmosphere: boolean,
-): number {
-    const p0 = isOpenAtmosphere ? ATM_PRESSURE : 0;
-    return p0 + getGaugePressurePa(x, y, basinLabels, waterSurfaces, gravity) / 1000;
-}
-
-function buildWallForceVectors(
-    wallGrid: boolean[][],
-    basinLabels: number[][],
-    waterSurfaces: number[],
-    gravity: number,
-): WallForceVector[] {
-    const vectors: WallForceVector[] = [];
-    const dirs: ReadonlyArray<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-    for (let r = 0; r < GRID_ROWS; r++) {
-        for (let c = 0; c < GRID_COLS; c++) {
-            if (!wallGrid[r][c]) continue;
-            for (const [dr, dc] of dirs) {
-                const nr = r + dr;
-                const nc = c + dc;
-                if (nr < 0 || nr >= GRID_ROWS || nc < 0 || nc >= GRID_COLS) continue;
-                if (wallGrid[nr][nc]) continue;
-                const pressure = getGaugePressurePa(nc + 0.5, nr + 0.5, basinLabels, waterSurfaces, gravity);
-                if (pressure <= 0) continue;
-                const force = pressure * WALL_FACE_AREA;
-                vectors.push({
-                    x: nc + 0.5,
-                    y: nr + 0.5,
-                    fx: -dc * force,
-                    fy: -dr * force,
-                    magnitude: force,
-                });
-            }
-        }
-    }
-    return vectors;
-}
-
-// ============================================================
-// Component
-// ============================================================
 
 export default function HydrostaticPressure() {
-    const [simState, setSimState] = useState<SimState>(createInitialState);
+    const [simState, setSimState] = useState<SimState>(() => ({ wallGrid: createInitialWallGrid() }));
+    const waterVolsRef = useRef<Float32Array>(new Float32Array(GRID_COLS));
+    
+    useEffect(() => {
+        let initialized = false;
+        for (let c=0; c<GRID_COLS; c++) if (waterVolsRef.current[c] > 0) initialized = true;
+        if (!initialized) {
+            for (let c = 1; c < GRID_COLS - 1; c++) {
+                if (c === 15) continue;
+                let cap = 0;
+                for (let r = DEFAULT_FLUID_SURFACE; r < GRID_ROWS; r++) if (!simState.wallGrid[r][c]) cap++;
+                waterVolsRef.current[c] = cap;
+            }
+        }
+    }, [simState.wallGrid]);
+
     const [gravity, setGravity] = useState(9.81);
     const [isOpenAtmosphere, setIsOpenAtmosphere] = useState(true);
-
     const [toolMode, setToolMode] = useState<ToolMode>('sensor');
     const [showPressureField, setShowPressureField] = useState(false);
     const [showWallForces, setShowWallForces] = useState(true);
@@ -289,64 +155,19 @@ export default function HydrostaticPressure() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const isDrawingRef = useRef(false);
-    const lastWaterCellRef = useRef('');
     const lastCellRef = useRef<{ r: number; c: number } | null>(null);
-    const fluidLevelsRef = useRef<number[][]>(
-        Array.from({ length: GRID_ROWS }, () => new Array(GRID_COLS).fill(0)),
-    );
-    const wallArrowTargetsRef = useRef<WallArrowTarget[]>([]);
-    const [hoveredForce, setHoveredForce] = useState<{ x: number; y: number; magnitude: number } | null>(null);
+    const lastWaterCellRef = useRef<string | null>(null);
 
-    // Derived: water surface Y per basin (continuous / fractional)
-    const waterSurfaces = useMemo(
-        () =>
-            simState.waterVolumes.map((vol, i) =>
-                i < simState.basinProfiles.length
-                    ? computeWaterSurface(simState.basinProfiles[i], vol)
-                    : GRID_ROWS + 1,
-            ),
-        [simState.waterVolumes, simState.basinProfiles],
-    );
-
-    // State ref for render loop (avoids re-creating the effect)
-    const stateRef = useRef({
-        wallGrid: simState.wallGrid,
-        basinLabels: simState.basinLabels,
-        waterSurfaces,
-        sensors,
-        gravity,
-        isOpenAtmosphere,
-        showPressureField,
-        showWallForces,
-    });
+    const stateRef = useRef({ wallGrid: simState.wallGrid, gravity, isOpenAtmosphere, showPressureField, showWallForces });
     useEffect(() => {
-        stateRef.current = {
-            wallGrid: simState.wallGrid,
-            basinLabels: simState.basinLabels,
-            waterSurfaces,
-            sensors,
-            gravity,
-            isOpenAtmosphere,
-            showPressureField,
-            showWallForces,
-        };
-    }, [simState, waterSurfaces, sensors, gravity, isOpenAtmosphere, showPressureField, showWallForces]);
+        stateRef.current = { wallGrid: simState.wallGrid, gravity, isOpenAtmosphere, showPressureField, showWallForces };
+    }, [simState.wallGrid, gravity, isOpenAtmosphere, showPressureField, showWallForces]);
 
-    // Wall force summary for info panel
-    const wallForceSummary = useMemo(() => {
-        const vectors = buildWallForceVectors(simState.wallGrid, simState.basinLabels, waterSurfaces, gravity);
-        const fx = vectors.reduce((acc, v) => acc + v.fx, 0);
-        const fy = vectors.reduce((acc, v) => acc + v.fy, 0);
-        return {
-            count: vectors.length,
-            total: Math.sqrt(fx * fx + fy * fy),
-            max: vectors.reduce((acc, v) => Math.max(acc, v.magnitude), 0),
-        };
-    }, [simState.wallGrid, simState.basinLabels, waterSurfaces, gravity]);
+    const [wallForceSummary, setWallForceSummary] = useState({ count: 0, total: 0, max: 0 });
 
     const getPressureAt = useCallback(
-        (x: number, y: number) => getPressureKPa(x, y, simState.basinLabels, waterSurfaces, gravity, isOpenAtmosphere),
-        [simState.basinLabels, waterSurfaces, gravity, isOpenAtmosphere],
+        (x: number, y: number) => getPressureKPa(x, y, waterVolsRef.current, simState.wallGrid, gravity, isOpenAtmosphere),
+        [simState.wallGrid, gravity, isOpenAtmosphere]
     );
 
     const closestGravityRef = useMemo(() => {
@@ -359,79 +180,48 @@ export default function HydrostaticPressure() {
         return minDist < 0.3 ? closest : null;
     }, [gravity]);
 
-    // --- Tool application ---
-    const applyTool = useCallback(
-        (r: number, c: number) => {
-            if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return;
+    const applyTool = useCallback((r: number, c: number) => {
+        if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return;
 
-            // Dedup water tools per cell during a single stroke
-            if (toolMode === 'addWater' || toolMode === 'removeWater') {
-                const key = `${r},${c}`;
-                if (lastWaterCellRef.current === key) return;
-                lastWaterCellRef.current = key;
+        if (toolMode === 'addWater' || toolMode === 'removeWater') {
+            const key = `${r},${c}`;
+            if (lastWaterCellRef.current === key) return;
+            lastWaterCellRef.current = key;
+        }
+
+        if (toolMode === 'addWater') {
+            const cap = computeCapacity(c, simState.wallGrid);
+            waterVolsRef.current[c] = Math.min(cap, waterVolsRef.current[c] + 4.0);
+            return;
+        }
+        if (toolMode === 'removeWater') {
+            waterVolsRef.current[c] = Math.max(0, waterVolsRef.current[c] - 4.0);
+            return;
+        }
+
+        setSimState((prev) => {
+            if (toolMode === 'draw') {
+                if (prev.wallGrid[r][c]) return prev;
+                const newWall = prev.wallGrid.map(row => [...row]);
+                newWall[r][c] = true;
+                waterVolsRef.current[c] = Math.max(0, waterVolsRef.current[c] - 1);
+                return { wallGrid: newWall };
             }
+            if (toolMode === 'erase') {
+                if (!prev.wallGrid[r][c]) return prev;
+                if (r === GRID_ROWS - 1 || c === 0 || c === GRID_COLS - 1) return prev;
+                const newWall = prev.wallGrid.map(row => [...row]);
+                newWall[r][c] = false;
+                return { wallGrid: newWall };
+            }
+            return prev;
+        });
+    }, [toolMode, simState.wallGrid]);
 
-            setSimState((prev) => {
-                if (toolMode === 'draw') {
-                    if (prev.wallGrid[r][c]) return prev;
-                    const newWall = prev.wallGrid.map((row) => [...row]);
-                    newWall[r][c] = true;
-                    const nb = computeBasins(newWall);
-                    const nv = redistributeVolumes(nb, prev.basinLabels, prev.basinProfiles, prev.waterVolumes);
-                    return { wallGrid: newWall, basinLabels: nb.labels, basinProfiles: nb.profiles, waterVolumes: nv };
-                }
-
-                if (toolMode === 'erase') {
-                    if (!prev.wallGrid[r][c]) return prev;
-                    if (r === GRID_ROWS - 1 || c === 0 || c === GRID_COLS - 1) return prev;
-                    const newWall = prev.wallGrid.map((row) => [...row]);
-                    newWall[r][c] = false;
-                    const nb = computeBasins(newWall);
-                    const nv = redistributeVolumes(nb, prev.basinLabels, prev.basinProfiles, prev.waterVolumes);
-                    return { wallGrid: newWall, basinLabels: nb.labels, basinProfiles: nb.profiles, waterVolumes: nv };
-                }
-
-                if (toolMode === 'addWater') {
-                    const bid = prev.basinLabels[r][c];
-                    if (bid === -1) return prev;
-                    const nv = [...prev.waterVolumes];
-                    nv[bid] = Math.min(prev.basinProfiles[bid].capacity, nv[bid] + 5);
-                    return { ...prev, waterVolumes: nv };
-                }
-
-                if (toolMode === 'removeWater') {
-                    const bid = prev.basinLabels[r][c];
-                    if (bid === -1) return prev;
-                    const nv = [...prev.waterVolumes];
-                    nv[bid] = Math.max(0, nv[bid] - 5);
-                    return { ...prev, waterVolumes: nv };
-                }
-
-                return prev;
-            });
-        },
-        [toolMode],
-    );
-
-    // --- Pointer handlers ---
-    const getGridCoords = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return { x: 0, y: 0, r: 0, c: 0 };
-        const rect = canvas.getBoundingClientRect();
-        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-        const px = clientX - rect.left;
-        const py = clientY - rect.top;
-        const cellW = canvas.width / GRID_COLS;
-        const cellH = canvas.height / GRID_ROWS;
-        return { x: px / cellW, y: py / cellH, c: Math.floor(px / cellW), r: Math.floor(py / cellH) };
-    }, []);
-
-    // Bresenham line: returns all cells between (r0,c0) and (r1,c1)
     const bresenhamLine = useCallback((r0: number, c0: number, r1: number, c1: number) => {
         const cells: Array<{ r: number; c: number }> = [];
-        let dr = Math.abs(r1 - r0);
-        let dc = Math.abs(c1 - c0);
+        const dr = Math.abs(r1 - r0);
+        const dc = Math.abs(c1 - c0);
         const sr = r0 < r1 ? 1 : -1;
         const sc = c0 < c1 ? 1 : -1;
         let err = dc - dr;
@@ -447,17 +237,36 @@ export default function HydrostaticPressure() {
         return cells;
     }, []);
 
+    const getGridCoords = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return { x: 0, y: 0, r: 0, c: 0 };
+        const rect = canvas.getBoundingClientRect();
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        const px = clientX - rect.left;
+        const py = clientY - rect.top;
+        const cellW = canvas.width / GRID_COLS;
+        const cellH = canvas.height / GRID_ROWS;
+        return { x: px / cellW, y: py / cellH, c: Math.floor(px / cellW), r: Math.floor(py / cellH) };
+    }, []);
+
+    const handleClearAll = useCallback(() => {
+        const wg = createInitialWallGrid();
+        for(let c=1; c<GRID_COLS-1; c++) {
+            waterVolsRef.current[c] = 0;
+            for(let r=1; r<GRID_ROWS-1; r++) wg[r][c] = false;
+        }
+        setSimState({ wallGrid: wg });
+    }, []);
+
     const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
         const { x, y, r, c } = getGridCoords(e);
-        lastWaterCellRef.current = '';
         lastCellRef.current = { r, c };
+        lastWaterCellRef.current = null;
 
         if (toolMode === 'sensor') {
             const clicked = sensors.find((s) => Math.hypot(s.x - x, s.y - y) < 1.5);
-            if (clicked) {
-                setActiveSensorId(clicked.id);
-                isDrawingRef.current = true;
-            }
+            if (clicked) { setActiveSensorId(clicked.id); isDrawingRef.current = true; }
             return;
         }
         isDrawingRef.current = true;
@@ -465,624 +274,199 @@ export default function HydrostaticPressure() {
     };
 
     const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
-        const isTouch = 'touches' in e;
-        const { x, y, r, c } = getGridCoords(e);
-
-        // Hover tooltip for force arrows
-        if (!isTouch && showWallForces) {
-            const canvas = canvasRef.current;
-            if (canvas) {
-                const rect = canvas.getBoundingClientRect();
-                const px = x * (canvas.width / GRID_COLS);
-                const py = y * (canvas.height / GRID_ROWS);
-                const bestHit = wallArrowTargetsRef.current.reduce<{ target: WallArrowTarget | null; dist: number }>(
-                    (acc, target) => {
-                        const dist = distancePointToSegment(px, py, target.startX, target.startY, target.endX, target.endY);
-                        return dist < acc.dist ? { target, dist } : acc;
-                    },
-                    { target: null, dist: Number.POSITIVE_INFINITY },
-                );
-                if (bestHit.target && bestHit.dist <= 10) {
-                    setHoveredForce({
-                        x: clamp(('clientX' in e ? e.clientX : 0) - rect.left + 14, 8, rect.width - 70),
-                        y: clamp(('clientY' in e ? e.clientY : 0) - rect.top - 18, 8, rect.height - 24),
-                        magnitude: bestHit.target.magnitude,
-                    });
-                } else {
-                    setHoveredForce(null);
-                }
-            }
-        } else {
-            setHoveredForce(null);
-        }
-
         if (!isDrawingRef.current) return;
-
+        const { x, y, r, c } = getGridCoords(e);
+        
         if (toolMode === 'sensor' && activeSensorId) {
-            setSensors((prev) =>
-                prev.map((s) =>
-                    s.id === activeSensorId
-                        ? { ...s, x: clamp(x, 0.5, GRID_COLS - 0.5), y: clamp(y, 0.5, GRID_ROWS - 0.5) }
-                        : s,
-                ),
-            );
-            lastCellRef.current = { r, c };
+            setSensors((prev) => prev.map((s) => s.id === activeSensorId ? { ...s, x: Math.max(0.5, Math.min(GRID_COLS - 0.5, x)), y: Math.max(0.5, Math.min(GRID_ROWS - 0.5, y)) } : s));
             return;
         }
 
-        // Interpolate from last cell to current cell so fast drags don't leave gaps
         const prev = lastCellRef.current;
         if (prev && (prev.r !== r || prev.c !== c)) {
-            const cells = bresenhamLine(prev.r, prev.c, r, c);
-            // Skip first cell (already applied)
-            for (let i = 1; i < cells.length; i++) {
-                applyTool(cells[i].r, cells[i].c);
-            }
+            bresenhamLine(prev.r, prev.c, r, c).forEach(({ r: cr, c: cc }) => applyTool(cr, cc));
         } else {
             applyTool(r, c);
         }
         lastCellRef.current = { r, c };
     };
 
-    const handlePointerUp = () => {
-        isDrawingRef.current = false;
-        setActiveSensorId(null);
-        lastWaterCellRef.current = '';
-        lastCellRef.current = null;
-    };
+    const handlePointerUp = () => { isDrawingRef.current = false; setActiveSensorId(null); lastCellRef.current = null; lastWaterCellRef.current = null; };
 
-    // Clear all walls and water except border walls
-    const handleClearAll = useCallback(() => {
-        const wallGrid: boolean[][] = Array.from({ length: GRID_ROWS }, () => new Array(GRID_COLS).fill(false));
-        for (let r = 0; r < GRID_ROWS; r++) {
-            for (let c = 0; c < GRID_COLS; c++) {
-                if (c === 0 || c === GRID_COLS - 1 || r === GRID_ROWS - 1) wallGrid[r][c] = true;
-            }
-        }
-        const { labels, profiles } = computeBasins(wallGrid);
-        const waterVolumes = new Array(profiles.length).fill(0);
-        setSimState({ wallGrid, basinLabels: labels, basinProfiles: profiles, waterVolumes });
-    }, []);
-
-    // ============================================================
-    // Render loop
-    // ============================================================
+    // --- Render Loop ---
     useEffect(() => {
         let animationId = 0;
+        let frameCount = 0;
 
-        const drawArrow = (
-            ctx: CanvasRenderingContext2D,
-            x1: number, y1: number,
-            x2: number, y2: number,
-            color: string, width: number,
-        ) => {
-            const dx = x2 - x1;
-            const dy = y2 - y1;
-            const len = Math.sqrt(dx * dx + dy * dy);
-            if (len < 1) return;
-            const ux = dx / len;
-            const uy = dy / len;
-            const head = Math.max(4, Math.min(9, len * 0.35));
+        const renderLoop = () => {
+            frameCount++;
+            const { wallGrid, gravity, showPressureField, showWallForces, isOpenAtmosphere } = stateRef.current;
+            const waterVols = waterVolsRef.current;
 
-            ctx.strokeStyle = color;
-            ctx.fillStyle = color;
-            ctx.lineWidth = width;
-
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(x2, y2);
-            ctx.lineTo(x2 - ux * head - uy * head * 0.5, y2 - uy * head + ux * head * 0.5);
-            ctx.lineTo(x2 - ux * head + uy * head * 0.5, y2 - uy * head - ux * head * 0.5);
-            ctx.closePath();
-            ctx.fill();
-        };
-
-        const renderLoop = (time: number) => {
-            const {
-                wallGrid: curWall,
-                basinLabels: curLabels,
-                waterSurfaces: curSurfaces,
-                sensors: curSensors,
-                gravity: curGravity,
-                isOpenAtmosphere: curOpen,
-                showPressureField: curShowPressure,
-                showWallForces: curShowForces,
-            } = stateRef.current;
-
-            const fluidLevels = fluidLevelsRef.current;
-
-            // Animate fill levels toward physics targets
-            for (let r = 0; r < GRID_ROWS; r++) {
-                for (let c = 0; c < GRID_COLS; c++) {
-                    let fillTarget = 0;
-                    if (!curWall[r][c]) {
-                        const bid = curLabels[r][c];
-                        if (bid !== -1 && bid < curSurfaces.length) {
-                            const surface = curSurfaces[bid];
-                            if (surface <= r) {
-                                fillTarget = 1;
-                            } else if (surface < r + 1) {
-                                fillTarget = r + 1 - surface;
-                            }
-                        }
-                    }
-                    const cur = fluidLevels[r][c];
-                    if (cur < fillTarget) {
-                        fluidLevels[r][c] = Math.min(fillTarget, cur + 0.12);
-                    } else if (cur > fillTarget) {
-                        fluidLevels[r][c] = Math.max(fillTarget, cur - 0.15);
-                    }
-                }
-            }
+            for(let i=0; i<6; i++) tickFluid(waterVols, wallGrid);
 
             const canvas = canvasRef.current;
             const container = containerRef.current;
-            if (!canvas || !container) {
-                animationId = requestAnimationFrame(renderLoop);
-                return;
-            }
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                animationId = requestAnimationFrame(renderLoop);
-                return;
-            }
+            if (!canvas || !container) return (animationId = requestAnimationFrame(renderLoop));
+            
+            const ctx = canvas.getContext('2d', { alpha: false });
+            if (!ctx) return;
 
             const rect = container.getBoundingClientRect();
-            if (canvas.width !== rect.width || canvas.height !== rect.height) {
-                canvas.width = rect.width;
-                canvas.height = rect.height;
+            if (canvas.width !== rect.width || canvas.height !== rect.height) { canvas.width = rect.width; canvas.height = rect.height; }
+
+            const cellW = canvas.width / GRID_COLS, cellH = canvas.height / GRID_ROWS;
+            
+            ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 1; ctx.beginPath();
+            for (let r = 0; r <= GRID_ROWS; r++) { ctx.moveTo(0, r * cellH); ctx.lineTo(canvas.width, r * cellH); }
+            for (let c = 0; c <= GRID_COLS; c++) { ctx.moveTo(c * cellW, 0); ctx.lineTo(c * cellW, canvas.height); }
+            ctx.stroke();
+
+            for (let c = 0; c < GRID_COLS; c++) {
+                if (waterVols[c] <= 0.001) continue;
+                let fluidLeft = waterVols[c];
+                
+                for (let r = GRID_ROWS - 1; r >= 0 && fluidLeft > 0.001; r--) {
+                    if (wallGrid[r][c]) continue;
+                    
+                    const fillAmount = Math.min(1.0, fluidLeft);
+                    
+                    if (showPressureField) {
+                        const surface = getColumnSurface(c, waterVols[c], wallGrid);
+                        const depth = (r + 1 - surface) * METERS_PER_CELL;
+                        const hue = Math.max(0, 220 - (depth / 10) * 220);
+                        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${0.5 + fillAmount * 0.4})`;
+                    } else {
+                        const surface = getColumnSurface(c, waterVols[c], wallGrid);
+                        const depth = (r + 1 - surface) * METERS_PER_CELL;
+                        const norm = Math.min(1, Math.max(0, depth / 10));
+                        ctx.fillStyle = WATER_COLOR;
+                        ctx.globalAlpha = 0.6 + norm * 0.4;
+                    }
+                    
+                    const h = cellH * fillAmount;
+                    const y = r * cellH + (cellH - h);
+                    
+                    ctx.fillRect(c * cellW, y, cellW + 0.5, h + 0.5);
+                    ctx.globalAlpha = 1;
+                    
+                    if (fluidLeft <= 1.0) {
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+                        ctx.beginPath(); ctx.moveTo(c * cellW, y); ctx.lineTo((c + 1) * cellW, y); ctx.stroke(); ctx.setLineDash([]);
+                    }
+                    fluidLeft -= fillAmount;
+                }
             }
 
-            const cellW = canvas.width / GRID_COLS;
-            const cellH = canvas.height / GRID_ROWS;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Grid lines
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-            ctx.lineWidth = 1;
-            for (let r = 0; r <= GRID_ROWS; r++) {
-                ctx.beginPath();
-                ctx.moveTo(0, r * cellH);
-                ctx.lineTo(canvas.width, r * cellH);
-                ctx.stroke();
-            }
-            for (let c = 0; c <= GRID_COLS; c++) {
-                ctx.beginPath();
-                ctx.moveTo(c * cellW, 0);
-                ctx.lineTo(c * cellW, canvas.height);
-                ctx.stroke();
-            }
-
-            // Cells: solid + fluid
+            let forceTotalX = 0, forceTotalY = 0, forceMax = 0, forceCount = 0;
+            ctx.fillStyle = '#334155'; ctx.strokeStyle = '#475569';
+            
             for (let r = 0; r < GRID_ROWS; r++) {
                 for (let c = 0; c < GRID_COLS; c++) {
-                    // Solid
-                    if (curWall[r][c]) {
-                        ctx.fillStyle = '#334155';
+                    if (wallGrid[r][c]) {
                         ctx.fillRect(c * cellW, r * cellH, cellW + 0.5, cellH + 0.5);
-                        ctx.strokeStyle = '#475569';
                         ctx.strokeRect(c * cellW + 1.5, r * cellH + 1.5, cellW - 3, cellH - 3);
-                        continue;
+                        
+                        if (showWallForces) {
+                            for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+                                const nr = r + dr, nc = c + dc;
+                                if (nr < 0 || nr >= GRID_ROWS || nc < 0 || nc >= GRID_COLS || wallGrid[nr][nc]) continue;
+                                const p = getPressureKPa(nc + 0.5, nr + 0.5, waterVols, wallGrid, gravity, isOpenAtmosphere) - (isOpenAtmosphere ? ATM_PRESSURE : 0);
+                                if (p <= 0.01) continue;
+                                const magnitude = p * WALL_FACE_AREA * 1000;
+                                forceCount++; forceTotalX -= dc * magnitude; forceTotalY -= dr * magnitude; forceMax = Math.max(forceMax, magnitude);
+                                
+                                const len = cellW * (0.2 + 0.65 * Math.min(1, p / 60));
+                                const x1 = (nc + 0.5 - dc * 0.15) * cellW, y1 = (nr + 0.5 - dr * 0.15) * cellH;
+                                const x2 = x1 + dc * len, y2 = y1 + dr * len;
+                                const ux = dc, uy = dr;
+                                const head = Math.min(7, len * 0.4);
+                                ctx.strokeStyle = ctx.fillStyle = 'rgba(251, 146, 60, 0.9)'; ctx.lineWidth = 1.5;
+                                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+                                ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(x2 - ux * head - uy * head * 0.5, y2 - uy * head + ux * head * 0.5); ctx.lineTo(x2 - ux * head + uy * head * 0.5, y2 - uy * head - ux * head * 0.5); ctx.fill();
+                            }
+                        }
                     }
-
-                    const level = fluidLevels[r][c];
-                    if (level <= 0.001) continue;
-
-                    const bid = curLabels[r][c];
-                    if (bid === -1) continue;
-
-                    // Color by depth
-                    if (curShowPressure) {
-                        const surface = curSurfaces[bid];
-                        const depthCells = Math.max(0, r + 0.5 - surface);
-                        const maxDepth = Math.max(1, GRID_ROWS - surface);
-                        const hue = 220 - (depthCells / maxDepth) * 220;
-                        ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${0.4 + level * 0.45})`;
-                    } else {
-                        const surface = curSurfaces[bid];
-                        const normalDepth = Math.max(0, r + 0.5 - surface) / Math.max(1, GRID_ROWS - surface);
-                        ctx.fillStyle = WATER_COLOR;
-                        ctx.globalAlpha = (0.5 + normalDepth * 0.5) * level;
-                    }
-
-                    const h = cellH * level;
-                    const y = r * cellH + (cellH - h);
-
-                    // Wave on surface cells
-                    let waveOffset = 0;
-                    if (level > 0.05 && level < 0.98) {
-                        waveOffset = Math.sin(time * 0.003 + c * 0.45) * (cellH * 0.07 * level);
-                    } else if (level >= 0.9 && (r === 0 || fluidLevels[r - 1][c] < 0.1)) {
-                        waveOffset = Math.sin(time * 0.003 + c * 0.45) * (cellH * 0.12);
-                    }
-
-                    ctx.fillRect(c * cellW, y + waveOffset, cellW + 0.5, h - waveOffset + 0.5);
-                    ctx.globalAlpha = 1;
                 }
             }
 
-            // Wall force arrows
-            const wallVectors = buildWallForceVectors(curWall, curLabels, curSurfaces, curGravity);
-            wallArrowTargetsRef.current = [];
-
-            if (curShowForces && wallVectors.length > 0) {
-                const sorted = [...wallVectors].sort((a, b) => b.magnitude - a.magnitude).slice(0, 120);
-                const maxForce = sorted[0]?.magnitude ?? 1;
-
-                sorted.forEach((vector) => {
-                    const ux = vector.fx / vector.magnitude;
-                    const uy = vector.fy / vector.magnitude;
-                    const len = cellW * (0.2 + 0.65 * (vector.magnitude / maxForce));
-
-                    const startX = (vector.x + ux * 0.35) * cellW;
-                    const startY = (vector.y + uy * 0.35) * cellH;
-                    const endX = startX + ux * len;
-                    const endY = startY + uy * len;
-
-                    drawArrow(ctx, startX, startY, endX, endY, 'rgba(251, 146, 60, 0.92)', 1.4);
-                    wallArrowTargetsRef.current.push({ startX, startY, endX, endY, magnitude: vector.magnitude });
-                });
-            }
-
-            // Water surface dashed line (per column)
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.34)';
-            ctx.setLineDash([6, 6]);
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            for (let c = 0; c < GRID_COLS; c++) {
-                for (let r = 0; r < GRID_ROWS; r++) {
-                    if (curWall[r][c]) continue;
-                    const bid = curLabels[r][c];
-                    if (bid === -1 || bid >= curSurfaces.length) break;
-                    const surface = curSurfaces[bid];
-                    if (surface >= GRID_ROWS) break; // no water
-                    // Only draw in columns where the surface Y is reachable
-                    if (surface >= r && surface < GRID_ROWS) {
-                        const py = surface * cellH;
-                        ctx.moveTo(c * cellW, py);
-                        ctx.lineTo((c + 1) * cellW, py);
-                    }
-                    break;
-                }
-            }
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            // Sensors
-            curSensors.forEach((sensor) => {
-                const px = sensor.x * cellW;
-                const py = sensor.y * cellH;
-
-                ctx.beginPath();
-                ctx.arc(px, py, 12, 0, Math.PI * 2);
-                ctx.fillStyle = sensor.color;
-                ctx.fill();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(px, py, 4, 0, Math.PI * 2);
-                ctx.fillStyle = '#fff';
-                ctx.fill();
-
-                const pressure = getPressureKPa(
-                    sensor.x, sensor.y,
-                    curLabels, curSurfaces,
-                    curGravity, curOpen,
-                );
-
-                const label = `${pressure.toFixed(1)} kPa`;
-                ctx.font = '700 12px ui-sans-serif, sans-serif';
-                const textWidth = ctx.measureText(label).width;
-
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.84)';
-                ctx.beginPath();
-                ctx.roundRect(px + 15, py - 20, textWidth + 16, 24, 4);
-                ctx.fill();
-
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText(label, px + 23, py - 4);
-            });
-
+            if (frameCount % 15 === 0) setWallForceSummary({ count: forceCount, total: Math.sqrt(forceTotalX*forceTotalX + forceTotalY*forceTotalY), max: forceMax });
             animationId = requestAnimationFrame(renderLoop);
         };
-
         animationId = requestAnimationFrame(renderLoop);
         return () => cancelAnimationFrame(animationId);
     }, []);
-
-    // ============================================================
-    // JSX – Controls
-    // ============================================================
 
     const controls = (
         <>
             <div className="space-y-1.5">
                 <div className="flex gap-1.5 justify-center bg-slate-950/50 p-1.5 rounded-xl border border-white/5">
-                    <button
-                        onClick={() => setToolMode('sensor')}
-                        aria-label="Mover sensores"
-                        className={cn(
-                            'p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5',
-                            toolMode === 'sensor' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white'
-                        )}
-                    >
-                        <MousePointer2 className="w-4 h-4" />
-                        <span className="text-[8px] leading-none">Mover</span>
-                    </button>
-                    <button
-                        onClick={() => setToolMode('draw')}
-                        aria-label="Dibujar paredes"
-                        className={cn(
-                            'p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5',
-                            toolMode === 'draw' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:text-white'
-                        )}
-                    >
-                        <PenTool className="w-4 h-4" />
-                        <span className="text-[8px] leading-none">Pared</span>
-                    </button>
-                    <button
-                        onClick={() => setToolMode('erase')}
-                        aria-label="Borrar paredes"
-                        className={cn(
-                            'p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5',
-                            toolMode === 'erase' ? 'bg-rose-500/20 text-rose-300' : 'text-slate-400 hover:text-white'
-                        )}
-                    >
-                        <Eraser className="w-4 h-4" />
-                        <span className="text-[8px] leading-none">Borrar</span>
-                    </button>
+                    <button onClick={() => setToolMode('sensor')} className={cn('p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5', toolMode === 'sensor' ? 'bg-cyan-500/20 text-cyan-300' : 'text-slate-400 hover:text-white')}><MousePointer2 className="w-4 h-4" /><span className="text-[8px] leading-none">Mover</span></button>
+                    <button onClick={() => setToolMode('draw')} className={cn('p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5', toolMode === 'draw' ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-400 hover:text-white')}><PenTool className="w-4 h-4" /><span className="text-[8px] leading-none">Pared</span></button>
+                    <button onClick={() => setToolMode('erase')} className={cn('p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5', toolMode === 'erase' ? 'bg-rose-500/20 text-rose-300' : 'text-slate-400 hover:text-white')}><Eraser className="w-4 h-4" /><span className="text-[8px] leading-none">Borrar</span></button>
                 </div>
                 <div className="flex gap-1.5 justify-center bg-slate-950/50 p-1.5 rounded-xl border border-white/5">
-                    <button
-                        onClick={() => setToolMode('addWater')}
-                        aria-label="A\u00f1adir agua"
-                        className={cn(
-                            'p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5',
-                            toolMode === 'addWater' ? 'bg-blue-500/20 text-blue-300' : 'text-slate-400 hover:text-white'
-                        )}
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span className="text-[8px] leading-none">Agua</span>
-                    </button>
-                    <button
-                        onClick={() => setToolMode('removeWater')}
-                        aria-label="Quitar agua"
-                        className={cn(
-                            'p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5',
-                            toolMode === 'removeWater' ? 'bg-sky-500/20 text-sky-200' : 'text-slate-400 hover:text-white'
-                        )}
-                    >
-                        <Minus className="w-4 h-4" />
-                        <span className="text-[8px] leading-none">Quitar</span>
-                    </button>
-                    <button
-                        onClick={() => setShowPressureField((v) => !v)}
-                        aria-label="Ver mapa de presiones"
-                        className={cn(
-                            'p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5',
-                            showPressureField ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white'
-                        )}
-                    >
-                        <Layers className="w-4 h-4" />
-                        <span className="text-[8px] leading-none">Presi&#243;n</span>
-                    </button>
+                    <button onClick={() => setToolMode('addWater')} className={cn('p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5', toolMode === 'addWater' ? 'bg-blue-500/20 text-blue-300' : 'text-slate-400 hover:text-white')}><Plus className="w-4 h-4" /><span className="text-[8px] leading-none">Agua</span></button>
+                    <button onClick={() => setToolMode('removeWater')} className={cn('p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5', toolMode === 'removeWater' ? 'bg-sky-500/20 text-sky-200' : 'text-slate-400 hover:text-white')}><Minus className="w-4 h-4" /><span className="text-[8px] leading-none">Quitar</span></button>
+                    <button onClick={() => setShowPressureField((v) => !v)} className={cn('p-2.5 rounded-lg transition-colors flex-1 flex flex-col items-center gap-0.5', showPressureField ? 'bg-purple-500/20 text-purple-300' : 'text-slate-400 hover:text-white')}><Layers className="w-4 h-4" /><span className="text-[8px] leading-none">Presión</span></button>
                 </div>
-                <button
-                    onClick={handleClearAll}
-                    aria-label="Limpiar todo"
-                    className="w-full p-2 rounded-lg transition-colors bg-slate-950/50 border border-white/5 text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 flex items-center justify-center gap-1.5"
-                >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span className="text-[9px] leading-none font-medium">Limpiar todo</span>
-                </button>
+                <button onClick={handleClearAll} className="w-full p-2 rounded-lg transition-colors bg-slate-950/50 border border-white/5 text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 flex items-center justify-center gap-1.5"><Trash2 className="w-3.5 h-3.5" /><span className="text-[9px] leading-none font-medium">Limpiar paredes</span></button>
             </div>
-
             <div className="space-y-3">
-                {/* Gravity slider */}
                 <div className="space-y-2 rounded-lg border border-white/10 bg-slate-950/40 p-3">
                     <div className="flex items-center justify-between text-[11px] font-semibold tracking-wide text-slate-300">
-                        <span>Gravedad</span>
-                        <span className="font-mono text-cyan-300">
-                            {gravity.toFixed(2)} m/s&#178;
-                            {closestGravityRef && <span className="text-slate-500 ml-1">({closestGravityRef.name})</span>}
-                        </span>
+                        <span>Gravedad</span><span className="font-mono text-cyan-300">{gravity.toFixed(2)} m/s²{closestGravityRef && <span className="text-slate-500 ml-1">({closestGravityRef.name})</span>}</span>
                     </div>
-                    <input
-                        type="range"
-                        min={GRAVITY_MIN}
-                        max={GRAVITY_MAX}
-                        step={0.01}
-                        value={gravity}
-                        onChange={(e) => setGravity(Number(e.target.value))}
-                        className="w-full accent-cyan-400"
-                        aria-label="Gravedad"
-                    />
-                    <div className="relative h-6">
-                        {GRAVITY_REFS.map((ref) => {
-                            const pct = ((ref.g - GRAVITY_MIN) / (GRAVITY_MAX - GRAVITY_MIN)) * 100;
-                            return (
-                                <button
-                                    key={ref.name}
-                                    onClick={() => setGravity(ref.g)}
-                                    className="absolute flex flex-col items-center -translate-x-1/2 hover:text-cyan-400 transition-colors cursor-pointer text-slate-500"
-                                    style={{ left: `${pct}%` }}
-                                    title={`${ref.name}: ${ref.g} m/s\u00b2`}
-                                >
-                                    <span className="block w-px h-1.5 bg-current mb-0.5" />
-                                    <span className="text-[9px] leading-none whitespace-nowrap">{ref.name}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                    <input type="range" min={GRAVITY_MIN} max={GRAVITY_MAX} step={0.01} value={gravity} onChange={(e) => setGravity(Number(e.target.value))} className="w-full accent-cyan-400" />
                 </div>
-
-                <button
-                    onClick={() => setIsOpenAtmosphere((v) => !v)}
-                    className={cn(
-                        'w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors',
-                        isOpenAtmosphere
-                            ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
-                            : 'bg-slate-950/50 border-white/10 text-slate-400'
-                    )}
-                    aria-pressed={isOpenAtmosphere}
-                >
+                <button onClick={() => setIsOpenAtmosphere((v) => !v)} className={cn('w-full flex items-center justify-between p-2.5 rounded-lg border transition-colors', isOpenAtmosphere ? 'bg-blue-500/10 border-blue-500/30 text-blue-300' : 'bg-slate-950/50 border-white/10 text-slate-400')}>
                     <span className="text-xs sm:text-sm font-medium">{isOpenAtmosphere ? 'Tanque abierto' : 'Tanque cerrado'}</span>
-                    <div className={cn('w-8 h-4 rounded-full relative transition-colors', isOpenAtmosphere ? 'bg-blue-500' : 'bg-slate-600')}>
-                        <div className={cn('absolute top-0.5 w-3 h-3 rounded-full bg-white transition-[left]', isOpenAtmosphere ? 'left-4.5' : 'left-0.5')} />
-                    </div>
+                    <div className={cn('w-8 h-4 rounded-full relative transition-[background-color]', isOpenAtmosphere ? 'bg-blue-500' : 'bg-slate-600')}><div className={cn('absolute top-0.5 w-3 h-3 rounded-full bg-white transition-[left]', isOpenAtmosphere ? 'left-4.5' : 'left-0.5')} /></div>
                 </button>
-
-                <div className="grid grid-cols-1 gap-2">
-                    <button
-                        onClick={() => setShowWallForces((v) => !v)}
-                        className={cn(
-                            'w-full rounded-lg border px-3 py-2 text-xs font-medium transition-colors',
-                            showWallForces
-                                ? 'bg-amber-500/15 border-amber-500/30 text-amber-100'
-                                : 'bg-slate-950/50 border-white/10 text-slate-300 hover:text-white'
-                        )}
-                        aria-pressed={showWallForces}
-                    >
-                        {showWallForces ? 'Ocultar fuerzas en paredes' : 'Mostrar fuerzas en paredes'}
-                    </button>
-                </div>
-
-                <div className="text-center font-mono text-lg text-white tracking-wider pt-2 border-t border-white/10 mt-1">
-                    P = P&#8320; + &#961;gh
-                </div>
+                <div className="grid grid-cols-1 gap-2"><button onClick={() => setShowWallForces((v) => !v)} className={cn('w-full rounded-lg border px-3 py-2 text-xs font-medium transition-colors', showWallForces ? 'bg-amber-500/15 border-amber-500/30 text-amber-100' : 'bg-slate-950/50 border-white/10 text-slate-300 hover:text-white')}>{showWallForces ? 'Ocultar fuerzas' : 'Mostrar fuerzas'}</button></div>
             </div>
         </>
     );
 
-    // ============================================================
-    // JSX – Layout
-    // ============================================================
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] w-full bg-slate-950 text-slate-200 overflow-hidden relative">
             <div className="flex-1 relative bg-slate-950 flex flex-col h-full w-full">
-                {/* Info panel */}
-                <div
-                    className={cn(
-                        'absolute z-20 bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-xl p-3 sm:p-4 shadow-2xl pointer-events-auto flex flex-col max-w-[250px]',
-                        'top-4 left-4'
-                    )}
-                >
+                <div className={cn('absolute z-20 bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-xl p-3 sm:p-4 shadow-2xl pointer-events-auto flex flex-col max-w-[250px]', 'top-4 left-4')}>
                     <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Lecturas y fuerzas</h3>
                     <div className="flex flex-col gap-2 sm:gap-3">
                         {sensors.map((sensor) => (
                             <div key={sensor.id} className="flex items-center gap-2 sm:gap-3">
-                                <div
-                                    className="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]"
-                                    style={{ backgroundColor: sensor.color, boxShadow: `0 0 10px ${sensor.color}80` }}
-                                />
-                                <span className="font-mono text-base sm:text-lg font-bold text-white tracking-tight">
-                                    {getPressureAt(sensor.x, sensor.y).toFixed(1)}{' '}
-                                    <span className="text-xs sm:text-sm text-slate-400 font-sans font-normal">kPa</span>
-                                </span>
+                                <div className="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]" style={{ backgroundColor: sensor.color, boxShadow: `0 0 10px ${sensor.color}80` }} />
+                                <div className="flex flex-col font-mono"><span className="text-base sm:text-lg font-bold text-white tracking-tight leading-none">{getPressureAt(sensor.x, sensor.y).toFixed(1)}</span><span className="text-[10px] text-slate-400 font-sans mt-0.5">kPa</span></div>
                             </div>
                         ))}
                     </div>
-
                     <div className="mt-3 border-t border-white/10 pt-2 space-y-1">
-                        <div className="flex justify-between text-[11px] text-slate-300">
-                            <span>Fuerza total pared</span>
-                            <span className="font-mono text-amber-200">{(wallForceSummary.total / 1000).toFixed(1)} kN</span>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-slate-400">
-                            <span>Contactos</span>
-                            <span className="font-mono">{wallForceSummary.count}</span>
-                        </div>
-                        <div className="flex justify-between text-[11px] text-slate-400">
-                            <span>Pico local</span>
-                            <span className="font-mono">{(wallForceSummary.max / 1000).toFixed(1)} kN</span>
-                        </div>
+                        <div className="flex justify-between text-[11px] text-slate-300"><span>Fuerza total</span><span className="font-mono text-amber-200">{(wallForceSummary.total / 1000).toFixed(1)} kN</span></div>
+                        <div className="flex justify-between text-[11px] text-slate-400"><span>Contactos</span><span className="font-mono">{wallForceSummary.count}</span></div>
                     </div>
                 </div>
 
-                {/* Mobile menu button */}
-                {isPortrait && (
-                    <button
-                        onClick={() => setIsMobileMenuOpen(true)}
-                        className="absolute top-4 right-4 z-30 p-3 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl text-slate-300 hover:text-white transition-colors"
-                        aria-label="Abrir configuracion"
-                    >
-                        <Settings className="w-5 h-5" />
-                    </button>
-                )}
-
-                {/* Mobile menu */}
+                {isPortrait && <button onClick={() => setIsMobileMenuOpen(true)} className="absolute top-4 right-4 z-30 p-3 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl text-slate-300 hover:text-white transition-colors"><Settings className="w-5 h-5" /></button>}
                 {isPortrait && isMobileMenuOpen && (
                     <div className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end pointer-events-auto">
                         <div className="bg-slate-900 border-t border-white/10 rounded-t-2xl p-4 flex flex-col gap-4 animate-in slide-in-from-bottom-full duration-300 max-h-[88vh] overflow-auto">
-                            <div className="flex justify-between items-center mb-1">
-                                <h3 className="text-sm font-bold text-white uppercase tracking-widest">Herramientas</h3>
-                                <button
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="p-2 text-slate-400 hover:text-white transition-colors"
-                                    aria-label="Cerrar menu"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
+                            <div className="flex justify-between items-center mb-1"><h3 className="text-sm font-bold text-white uppercase tracking-widest">Herramientas</h3><button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-slate-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button></div>
                             {controls}
                         </div>
                     </div>
                 )}
-
-                {/* Desktop sidebar */}
                 {!isPortrait && (
                     <div className="absolute top-4 right-4 z-20 w-72 bg-slate-900/85 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl overflow-hidden pointer-events-auto">
-                        <button
-                            onClick={() => setIsPropertiesCollapsed((v) => !v)}
-                            className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors border-b border-white/5"
-                        >
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controles</span>
-                            {isPropertiesCollapsed ? (
-                                <ChevronDown size={14} className="text-slate-400" />
-                            ) : (
-                                <ChevronUp size={14} className="text-slate-400" />
-                            )}
-                        </button>
-                        <div className={cn('p-4 transition-all duration-300', isPropertiesCollapsed ? 'hidden' : 'block')}>
-                            {controls}
-                        </div>
+                        <button onClick={() => setIsPropertiesCollapsed((v) => !v)} className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors border-b border-white/5"><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controles</span>{isPropertiesCollapsed ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}</button>
+                        <div className={cn('p-4 transition-all duration-300', isPropertiesCollapsed ? 'hidden' : 'block')}>{controls}</div>
                     </div>
                 )}
 
-                {/* Canvas area */}
-                <div
-                    ref={containerRef}
-                    className={cn(
-                        'flex-1 w-full h-full relative',
-                        toolMode === 'draw'
-                            ? 'cursor-crosshair'
-                            : toolMode === 'erase' || toolMode === 'addWater' || toolMode === 'removeWater'
-                                ? 'cursor-cell'
-                                : 'cursor-default'
-                    )}
-                    onMouseDown={handlePointerDown}
-                    onMouseMove={handlePointerMove}
-                    onMouseUp={handlePointerUp}
-                    onMouseLeave={handlePointerUp}
-                    onTouchStart={handlePointerDown}
-                    onTouchMove={handlePointerMove}
-                    onTouchEnd={handlePointerUp}
-                >
+                <div ref={containerRef} className={cn('flex-1 w-full h-full relative', toolMode === 'draw' ? 'cursor-crosshair' : toolMode === 'erase' || toolMode === 'addWater' || toolMode === 'removeWater' ? 'cursor-cell' : 'cursor-default')} onMouseDown={handlePointerDown} onMouseMove={handlePointerMove} onMouseUp={handlePointerUp} onMouseLeave={handlePointerUp} onTouchStart={handlePointerDown} onTouchMove={handlePointerMove} onTouchEnd={handlePointerUp}>
                     <canvas ref={canvasRef} className="absolute inset-0 w-full h-full touch-none" />
-                    {hoveredForce && (
-                        <div
-                            className="absolute pointer-events-none z-30 rounded-md border border-amber-400/30 bg-slate-900/95 px-2 py-1 text-[10px] text-amber-100 font-mono"
-                            style={{ left: hoveredForce.x, top: hoveredForce.y }}
-                        >
-                            {(hoveredForce.magnitude / 1000).toFixed(2)} kN
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
