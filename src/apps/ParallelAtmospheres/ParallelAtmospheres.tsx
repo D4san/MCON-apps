@@ -1,5 +1,6 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
-import { Plus, Trash2, Wind, Thermometer, Droplets, ChevronDown, ChevronUp, Layers, Rocket } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Plus, Trash2, Mountain, Wind, Thermometer, Droplets, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 type PlanetId = 'earth' | 'mars' | 'venus' | 'jupiter';
@@ -313,33 +314,41 @@ function PlanetLandscape({ planetId }: { planetId: PlanetId }) {
   }
 }
 
+
+function CollapsibleSection({ title, icon, defaultOpen = true, children, extraCount = 0, sideAction }: { title: ReactNode, icon?: ReactNode, defaultOpen?: boolean, children: ReactNode, extraCount?: number, sideAction?: ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden shadow-inner transition-all duration-300">
+      <div className="w-full flex justify-between items-center p-3 hover:bg-white/10 transition-colors cursor-pointer group" onClick={() => setOpen(!open)}>
+        <div className="flex items-center gap-2.5 text-xs font-bold text-slate-300 uppercase tracking-widest">
+          {icon} <span className="drop-shadow-sm">{title}</span>
+          {extraCount > 0 && <span className="bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded-md text-[9px] border border-indigo-500/30">{extraCount}</span>}
+        </div>
+        <div className="flex items-center gap-3">
+          <div onClick={e => e.stopPropagation()}>{sideAction}</div>
+          <button className="text-slate-500 group-hover:text-white transition-colors">
+            {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+      <div className={cn("overflow-hidden transition-all duration-300", open ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0")}>
+        <div className="p-3 pt-0 mt-1 mb-2">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function ParallelAtmospheres() {
   const [planetId, setPlanetId] = useState<PlanetId>('earth');
   const [field, setField] = useState<FieldId>('temperature');
   const [showRef, setShowRef] = useState(true);
-  
-  // Responsive Chart Dimensions
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [dim, setDim] = useState({ w: 800, h: 600 });
-  
-  // Collapse States for mobile-friendly UI
-  const [expandedSegments, setExpandedSegments] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      setDim({
-        w: entries[0].contentRect.width,
-        h: entries[0].contentRect.height
-      });
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
 
   const planet = useMemo(() => PLANETS.find((item) => item.id === planetId) ?? PLANETS[0], [planetId]);
 
+  // Superficie base custom
   const [surface, setSurface] = useState({ t0: 288.15, p0: 101.325 });
+  
+  // Tramos consecutivos
   const [segments, setSegments] = useState<SegmentData[]>([
     { id: 's1', model: 'lapse_rate', zMax: 11, lapseRate: -6.5, gamma: 1.4 },
     { id: 's2', model: 'isothermal', zMax: 20, lapseRate: 0, gamma: 1.4 }
@@ -351,8 +360,10 @@ export default function ParallelAtmospheres() {
     setSurface({ t0: p.t0, p0: p.p0 / 1000 });
   };
 
+  // Referencia
   const referencePts = useMemo(() => buildReferenceProfile(planet), [planet]);
 
+  // Perfil Estudiante Dividido por Grupos de Color (Modelos)
   const customProfileGroups = useMemo(() => {
     if (segments.length === 0) return [];
     const groups: { id: string; model: CurveModel; points: CurvePoint[] }[] = [];
@@ -370,6 +381,7 @@ export default function ParallelAtmospheres() {
       const zStep = (zMax - z0) / steps;
       let pts: CurvePoint[] = [];
 
+      // Conectar visualmente con el tramo anterior
       if (groups.length > 0) {
         const prevGroup = groups[groups.length - 1].points;
         const lastPt = prevGroup[prevGroup.length - 1];
@@ -381,7 +393,10 @@ export default function ParallelAtmospheres() {
       for(let i = 1; i <= steps; i++) {
         const zKm = z0 + i * zStep;
         const dz_m = (zKm - z0) * 1000;
-        let pPa = 0; let tK = t0; let rho = 0;
+
+        let pPa = 0;
+        let tK = t0;
+        let rho = 0;
 
         if (seg.model === 'isothermal') {
           tK = t0;
@@ -398,7 +413,7 @@ export default function ParallelAtmospheres() {
         } else if (seg.model === 'incompressible') {
           const rhoConst = (p0_Pa * M) / (GAS_R * t0);
           pPa = Math.max(0.001, p0_Pa - rhoConst * g * dz_m);
-          tK = t0;
+          tK = t0; // Assume isothermal for density logic fallback
         } else if (seg.model === 'homentropic') {
           const gamma = Math.max(1.01, seg.gamma);
           const cp = (gamma / (gamma - 1)) * (GAS_R / M);
@@ -416,7 +431,9 @@ export default function ParallelAtmospheres() {
 
       if (pts.length > 0) {
         const last = pts[pts.length - 1];
-        z0 = zMax; t0 = last.tC + 273.15; p0_Pa = last.pKPa * 1000;
+        z0 = zMax;
+        t0 = last.tC + 273.15;
+        p0_Pa = last.pKPa * 1000;
       }
     }
     return groups;
@@ -429,7 +446,7 @@ export default function ParallelAtmospheres() {
     if (allPts.length === 0) return { xMin: 0, xMax: 100, yMin: 0, yMax: Z_MAX_KM };
 
     const xVals = allPts.map(p => getFieldValue(p, field));
-    const yVals = allPts.map(p => p.zKm);
+    const yVals = allPts.map(p => p.zKm); // Y axis is always height now
 
     const xMinOrig = Math.min(...xVals);
     const xMaxOrig = Math.max(...xVals);
@@ -442,373 +459,356 @@ export default function ParallelAtmospheres() {
     return {
       xMin: xMinOrig - dx * 0.05,
       xMax: xMaxOrig + dx * 0.05,
-      yMin: yMinOrig,
+      yMin: yMinOrig, // Always start nicely from 0 or slightly below
       yMax: yMaxOrig + dy * 0.05,
     };
   }, [referencePts, customProfileFlat, field, showRef]);
 
   const xLabel = field === 'temperature' ? 'Temperatura [°C]' : field === 'pressure' ? 'Presión [kPa]' : 'Densidad [kg/m³]';
   
-  // Dynamic Map sizing depending on ResizeObserver tracking container dim
-  const chartWidth = Math.max(100, dim.w);
-  const chartHeight = Math.max(100, dim.h);
-  const isMobile = chartWidth < 500;
-  
-  const margins = { top: 40, right: isMobile ? 55 : 80, bottom: 65, left: isMobile ? 50 : 70 }; 
+  const chartWidth = 900;
+  const chartHeight = 600;
+  // Make wide margins for Left (Altitude) and Right (Pressure reference)
+  const margins = { top: 30, right: 90, bottom: 65, left: 80 }; 
   const innerW = chartWidth - margins.left - margins.right;
   const innerH = chartHeight - margins.top - margins.bottom;
 
   const mapX = (val: number) => margins.left + innerW * ((val - bounds.xMin) / (bounds.xMax - bounds.xMin || 1));
   const mapY = (val: number) => {
     const t = (val - bounds.yMin) / (bounds.yMax - bounds.yMin || 1);
-    return margins.top + innerH * (1 - t); 
+    return margins.top + innerH * (1 - t); // Altitude normal direction (upwards)
   };
 
   const addSegment = () => {
     const lastZ = segments.length > 0 ? segments[segments.length - 1].zMax : 0;
-    const newId = Date.now().toString();
-    setSegments(prev => [...prev, { id: newId, model: 'isothermal', zMax: lastZ + 10, lapseRate: 0, gamma: 1.4 }]);
-    // Always expand newly added segments
-    setExpandedSegments(prev => ({...prev, [newId]: true}));
+    setSegments(prev => [...prev, { id: Date.now().toString(), model: 'isothermal', zMax: lastZ + 10, lapseRate: 0, gamma: 1.4 }]);
   };
-  
   const updateSegment = (index: number, updates: Partial<SegmentData>) => {
     const newSegs = [...segments];
     newSegs[index] = { ...newSegs[index], ...updates };
     setSegments(newSegs);
   };
-  
   const removeSegment = (index: number) => {
     setSegments(prev => prev.filter((_, i) => i !== index));
   };
 
-  const toggleSegment = (id: string) => {
-    setExpandedSegments(prev => ({ ...prev, [id]: prev[id] === undefined ? false : !prev[id] }));
-  };
-
-  const xTicksCount = isMobile ? 4 : 8;
-  const yTicksCount = chartHeight < 400 ? 5 : 8;
 
   return (
-    <div className="relative w-full h-full bg-[#030712] overflow-hidden flex flex-col font-sans text-slate-100">
-      
-      {/* HEADER HUD: Planetas y Control Global */}
-      <header className="flex flex-col sm:flex-row gap-3 items-stretch justify-between p-3 lg:px-6 lg:py-4 border-b border-indigo-500/20 bg-slate-950/80 backdrop-blur-2xl z-30 shrink-0 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+    <div className="h-full min-h-0 flex flex-col gap-4 text-slate-100 font-sans p-2 overflow-hidden bg-[#020617]">
+      {/* Pestañas Superiores */}
+      <div className="flex gap-3 items-center justify-between bg-slate-900/90 backdrop-blur-sm border border-white/5 p-2 lg:p-3 rounded-2xl shrink-0 shadow-lg relative z-10 flex-col sm:flex-row">
+        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 hide-scrollbar pt-1 pl-1">
+          {PLANETS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => handlePlanetChange(p.id)}
+              className={cn(
+                'flex items-center gap-2 lg:gap-3 px-3 py-1.5 lg:px-4 lg:py-2 rounded-xl border transition-all duration-300 whitespace-nowrap shrink-0',
+                planetId === p.id
+                  ? 'border-cyan-400/50 bg-cyan-500/10 shadow-[0_0_15px_rgba(6,182,212,0.15)] ring-1 ring-cyan-400/20'
+                  : 'border-white/5 bg-slate-800/50 hover:bg-slate-800'
+              )}
+            >
+              <PlanetIcon id={p.id} className={cn("flex-shrink-0 border bg-black/50 transition-all", planetId === p.id ? "w-7 h-7 lg:w-8 lg:h-8" : "w-5 h-5 lg:w-6 lg:h-6")} />
+              <div className="text-left flex flex-col justify-center">
+                <div className={cn('text-xs lg:text-sm font-bold leading-tight', planetId === p.id ? 'text-cyan-50' : 'text-slate-300')}>{p.name}</div>
+                {planetId === p.id && <div className="text-[9px] lg:text-[10px] text-slate-400 max-w-[150px] truncate leading-tight animate-in fade-in slide-in-from-left-2">{p.subtitle}</div>}
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center justify-center gap-2 px-3 py-1.5 lg:py-2 bg-black/40 rounded-xl border border-white/5 shrink-0 w-full sm:w-auto shadow-inner">
+          <Mountain className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-slate-500" />
+          <span className="text-xs lg:text-sm font-mono text-slate-300 tracking-wider">g = <strong className="text-slate-100">{planet.gravity.toFixed(2)}</strong> <span className="opacity-60">m/s²</span></span>
+        </div>
+      </div>
+
+      <section className="flex flex-col-reverse lg:flex-row gap-4 min-h-0 flex-1 relative z-0">
         
-        <div className="flex items-center justify-between">
-           <div className="text-white font-bold tracking-widest text-xs uppercase flex items-center gap-2 px-2 shrink-0">
-             <Rocket className="w-4 h-4 text-cyan-400" />
-             <span className="hidden md:inline">Atmósferas P.P.</span>
-           </div>
-           
-           {/* Planet Selector Inline */}
-           <div className="flex gap-2 overflow-x-auto hide-scrollbar sm:px-4 snap-x bg-[#020617]/50 rounded-full border border-white/5 py-1 px-1">
-             {PLANETS.map((p) => (
-               <button key={p.id} onClick={() => handlePlanetChange(p.id)} className={cn('flex items-center gap-2 px-3 py-1.5 rounded-full snap-center transition-all duration-300', planetId === p.id ? 'bg-indigo-500/20 border border-indigo-400/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]' : 'hover:bg-slate-800 border border-transparent')}>
-                 <PlanetIcon id={p.id} className="w-4 h-4 flex-shrink-0" />
-                 <span className={cn('text-[10px] font-bold tracking-wider uppercase', planetId === p.id ? 'text-indigo-300' : 'text-slate-400')}>{p.name}</span>
-               </button>
-             ))}
-           </div>
-        </div>
+        {/* Editor de Tramos (Izquierda) */}
+        <aside className="w-full lg:w-[340px] flex-shrink-0 flex flex-col gap-4 min-h-0">
+          
+          <div className="bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col shadow-lg shrink-0">
+             <div className="flex gap-2">
+                <button className={cn("flex-1 flex flex-col items-center justify-center gap-1 rounded-lg py-2 px-1 border transition-colors", field === 'temperature' ? 'border-amber-400/50 bg-amber-500/10 text-amber-300' : 'border-white/10 bg-slate-950/50 text-slate-500 hover:bg-white/5')} onClick={() => setField('temperature')}>
+                  <Thermometer className="w-4 h-4" /><span className="text-[10px] uppercase font-bold">Temp</span>
+                </button>
+                <button className={cn("flex-1 flex flex-col items-center justify-center gap-1 rounded-lg py-2 px-1 border transition-colors", field === 'pressure' ? 'border-cyan-400/50 bg-cyan-500/10 text-cyan-300' : 'border-white/10 bg-slate-950/50 text-slate-500 hover:bg-white/5')} onClick={() => setField('pressure')}>
+                  <Wind className="w-4 h-4" /><span className="text-[10px] uppercase font-bold">Presión</span>
+                </button>
+                <button className={cn("flex-1 flex flex-col items-center justify-center gap-1 rounded-lg py-2 px-1 border transition-colors", field === 'density' ? 'border-emerald-400/50 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-slate-950/50 text-slate-500 hover:bg-white/5')} onClick={() => setField('density')}>
+                  <Droplets className="w-4 h-4" /><span className="text-[10px] uppercase font-bold">Densidad</span>
+                </button>
+             </div>
+          </div>
 
-        <div className="flex gap-2 w-full sm:w-auto relative items-center">
-            {/* Field Toggle Pill */}
-            <div className="flex-1 sm:flex-none flex items-center bg-black/60 rounded-full border border-white/10 p-1 w-full justify-between shadow-inner">
-               <button className={cn("flex-1 px-3 py-1.5 rounded-full flex items-center justify-center gap-1 transition-all", field === 'temperature' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'text-slate-500 hover:text-slate-300')} onClick={() => setField('temperature')}>
-                 <Thermometer className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-widest">T</span>
-               </button>
-               <button className={cn("flex-1 px-3 py-1.5 rounded-full flex items-center justify-center gap-1 transition-all", field === 'pressure' ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'text-slate-500 hover:text-slate-300')} onClick={() => setField('pressure')}>
-                 <Wind className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-widest">P</span>
-               </button>
-               <button className={cn("flex-1 px-3 py-1.5 rounded-full flex items-center justify-center gap-1 transition-all", field === 'density' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-slate-500 hover:text-slate-300')} onClick={() => setField('density')}>
-                 <Droplets className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-widest">ρ</span>
-               </button>
+          <div className="flex-1 bg-slate-900/80 backdrop-blur-md border border-white/10 rounded-2xl flex flex-col min-h-0 overflow-hidden shadow-lg h-[400px] lg:h-auto">
+            <div className="flex justify-between items-center py-3 px-4 border-b border-black/40 shadow-sm bg-slate-800/20">
+              <h2 className="text-sm font-semibold text-slate-200 flex items-center gap-2"><Layers className="w-4 h-4 text-indigo-400"/> Constructor de Perfil</h2>
+              <button 
+                 onClick={addSegment} 
+                 className="text-xs font-semibold flex items-center gap-1 bg-indigo-600 border border-indigo-500/50 text-white px-2.5 py-1.5 rounded-lg hover:bg-indigo-500 hover:scale-105 transition-all shadow-[0_0_10px_rgba(79,70,229,0.4)]"
+              >
+                <Plus className="w-3.5 h-3.5" /> Tramo
+              </button>
             </div>
-        </div>
-      </header>
 
-      {/* WORKSPACE: Controles y SVG Compartidos */}
-      <main className="flex-1 flex flex-col lg:flex-row relative min-h-0 z-10 w-full overflow-hidden">
-         
-         {/* THE PLANET CHART (Background and Interactive) */}
-         <div ref={containerRef} className="flex-1 h-[45vh] lg:h-full relative order-1 lg:order-2 bg-black/40 overflow-hidden flex-shrink-0 lg:flex-shrink">
-           
-           <PlanetLandscape planetId={planetId} />
-
-           {/* Floating Show Reference Toggle */}
-           <div className="absolute top-4 right-4 z-20 pointer-events-auto">
-             <label onClick={() => setShowRef(!showRef)} className="flex items-center gap-2 bg-slate-900/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-lg cursor-pointer hover:bg-slate-800 transition-colors">
-               <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300 hidden sm:inline">Ref. {planet.name}</span>
-               <div className={cn("w-7 h-4 rounded-full p-0.5 transition-colors", showRef ? "bg-indigo-500" : "bg-slate-700")}>
-                 <div className={cn("w-3 h-3 rounded-full bg-white transition-transform", showRef ? "translate-x-3" : "")} />
-               </div>
-             </label>
-           </div>
-
-           {/* Grid Graphics Engine */}
-           <svg width={dim.w} height={dim.h} className="absolute inset-0 font-sans z-10 pointer-events-none">
-             
-             {/* Dynamic Axis System */}
-             <g className="grid-lines">
-               {/* Vertical Grid & X Labels */}
-               {Array.from({ length: xTicksCount + 1 }).map((_, i) => {
-                 const t = i / xTicksCount;
-                 const val = bounds.xMin + t * (bounds.xMax - bounds.xMin);
-                 const x = mapX(val);
-                 return (
-                   <g key={`x-${i}`}>
-                     <line x1={x} y1={margins.top} x2={x} y2={chartHeight - margins.bottom} stroke="#334155" strokeWidth={1} strokeDasharray="4 6" strokeOpacity={0.5} />
-                     <text x={x} y={chartHeight - margins.bottom + 16} fill="#94a3b8" fontSize={9} fontFamily="monospace" textAnchor="middle" dominantBaseline="hanging">
-                       {formatTick(val)}
-                     </text>
-                   </g>
-                 );
-               })}
-               
-               {/* Horizontal Grid & Twin Y Labels */}
-               {Array.from({ length: yTicksCount + 1 }).map((_, i) => {
-                 const t = i / yTicksCount;
-                 const zAlt = bounds.yMin + t * (bounds.yMax - bounds.yMin); 
-                 const y = mapY(zAlt);
-                 const p_ref = interpolateRefPressure(referencePts, zAlt);
-
-                 return (
-                   <g key={`y-${i}`}>
-                     <line x1={margins.left} y1={y} x2={chartWidth - margins.right} y2={y} stroke="#334155" strokeWidth={1} strokeDasharray="4 6" strokeOpacity={0.5} />
-                     {/* LEFT: Altitude */}
-                     <text x={margins.left - 8} y={y} fill="#cbd5e1" fontSize={9} fontFamily="monospace" textAnchor="end" dominantBaseline="middle">
-                       {formatTick(zAlt)}
-                     </text>
-                     {/* RIGHT: Pressure */}
-                     <text x={chartWidth - margins.right + 8} y={y} fill="#60a5fa" fontSize={9} fontFamily="monospace" textAnchor="start" dominantBaseline="middle">
-                       {formatPressTick(p_ref)}
-                     </text>
-                   </g>
-                 );
-               })}
-
-               {/* Framed Bounding Box */}
-               <rect x={margins.left} y={margins.top} width={innerW} height={innerH} fill="none" stroke="#475569" strokeWidth={1.5} rx={2} />
-               
-               {/* Axis Titles (Hidden on very tiny mobiles to save space, but visible mostly) */}
-               {!isMobile && (
-                 <>
-                   <text x={margins.left + innerW / 2} y={chartHeight - 15} fill="#f8fafc" fontSize={11} fontWeight="bold" textAnchor="middle" letterSpacing={2}>
-                     {xLabel.toUpperCase()}
-                   </text>
-                   <text x={15} y={margins.top + innerH / 2} fill="#f8fafc" fontSize={11} fontWeight="bold" textAnchor="middle" transform={`rotate(-90 15 ${margins.top + innerH / 2})`} letterSpacing={2}>
-                     ALTURA Z [km]
-                   </text>
-                   <text x={chartWidth - 15} y={margins.top + innerH / 2} fill="#60a5fa" fontSize={10} fontWeight="bold" textAnchor="middle" transform={`rotate(90 ${chartWidth - 15} ${margins.top + innerH / 2})`} letterSpacing={2}>
-                     PRESIÓN REF. [kPa]
-                   </text>
-                 </>
-               )}
-             </g>
-
-             {/* NASA Reference Curve */}
-             {showRef && referencePts.length > 0 && (
-               <polyline
-                 fill="none"
-                 stroke="#ffffff"
-                 strokeWidth={3}
-                 strokeDasharray="4 6"
-                 opacity={0.8}
-                 strokeLinecap="round"
-                 strokeLinejoin="round"
-                 className="drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"
-                 points={referencePts.map((p) => `${mapX(getFieldValue(p, field)).toFixed(1)},${mapY(p.zKm).toFixed(1)}`).join(' ')}
-               />
-             )}
-
-             {/* Student Construct Curve */}
-             {customProfileGroups.length > 0 && (
-               <g>
-                 {customProfileGroups.map((group, i) => {
-                    const meta = MODEL_META[group.model];
-                    return (
-                      <polyline
-                        key={`seg-line-${i}`}
-                        fill="none"
-                        stroke={meta.color}
-                        strokeWidth={4.5}
-                        strokeOpacity={0.85}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="transition-all duration-300"
-                        style={{ filter: `drop-shadow(0px 0px 8px ${meta.color}99)` }}
-                        points={group.points.map((p) => `${mapX(getFieldValue(p, field)).toFixed(1)},${mapY(p.zKm).toFixed(1)}`).join(' ')}
-                      />
-                    );
-                 })}
-
-                 {/* Nodes */}
-                 {customProfileGroups.map((group, i) => {
-                   const pt = group.points[group.points.length - 1];
-                   if(!pt) return null;
-                   const cx = mapX(getFieldValue(pt, field));
-                   const cy = mapY(pt.zKm);
-                   return (
-                     <g key={`pt-${i}`}>
-                        <circle cx={cx} cy={cy} r={4.5} fill="#020617" stroke={MODEL_META[group.model].color} strokeWidth={2} className="shadow-lg" />
-                     </g>
-                   );
-                 })}
-                 
-                 {/* Origin Node */}
-                 {(() => {
-                   const firstGroup = customProfileGroups[0];
-                   if (!firstGroup || firstGroup.points.length === 0) return null;
-                   const p0 = firstGroup.points[0];
-                   const cx = mapX(getFieldValue(p0, field));
-                   const cy = mapY(p0.zKm);
-                   return (
-                     <g>
-                       <circle cx={cx} cy={cy} r={5} fill="#020617" stroke="#fff" strokeWidth={2.5} />
-                     </g>
-                   )
-                 })()}
-               </g>
-             )}
-           </svg>
-         </div>
-
-         {/* THE SCI-FI BUILDER PANEL (Bottom on Mobile, Left on Desktop) */}
-         <aside className={cn(
-             "order-2 lg:order-1 flex-shrink-0 overflow-y-auto transition-all bg-slate-950/95 backdrop-blur-3xl lg:backdrop-blur-xl",
-             "w-full lg:w-[380px] h-[55vh] lg:h-full border-t lg:border-t-0 lg:border-r border-indigo-500/20 flex flex-col relative z-20 custom-scrollbar shadow-[0_-5px_30px_rgba(0,0,0,0.5)] lg:shadow-[10px_0_30px_rgba(0,0,0,0.5)]"
-         )}>
-           
-           <div className="sticky top-0 bg-slate-950/80 backdrop-blur-xl pb-3 pt-4 px-5 border-b border-indigo-500/20 z-10 flex justify-between items-center">
-             <h2 className="text-xs font-bold text-slate-100 flex items-center gap-2 tracking-[0.2em] uppercase">
-               <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_#818cf8] animate-pulse" />
-               Builder Perfil
-             </h2>
-             <button onClick={addSegment} className="flex items-center gap-1.5 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 px-3 py-1.5 rounded-lg hover:bg-indigo-600/40 transition-colors text-[10px] font-bold uppercase tracking-widest shadow-inner">
-               <Plus className="w-3 h-3"/> Tramo
-             </button>
-           </div>
-           
-           <div className="p-4 space-y-4">
+            <div className="p-3 space-y-3 overflow-y-auto min-h-0 flex-1 custom-scrollbar">
               
-              {/* Superficie Collapsible-like box (Fixed but styled as a module) */}
-              <div className="border border-slate-700/50 rounded-xl bg-slate-900/40 relative shadow-inner overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-400 to-cyan-500" />
-                <div className="px-4 py-2 border-b border-slate-700/50 bg-black/20 flex justify-between items-center">
-                   <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">🌍 Base z=0</h3>
-                   <div className="text-[9px] text-slate-500 font-mono tracking-wider">g = {planet.gravity.toFixed(2)}</div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 p-3 pl-4">
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold">Temp T₀ [K]</span>
-                    <input type="number" step="1" value={surface.t0} onChange={e => setSurface(s => ({ ...s, t0: Number(e.target.value)}))} className="w-full text-xs font-mono bg-black/60 border border-slate-700 rounded px-2.5 py-1.5 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all text-slate-200" />
+              {/* Condiciones Iniciales (Superficie) */}
+              <CollapsibleSection title="Superficie (z = 0 km)" defaultOpen={false}>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] text-slate-400">Temperatura T₀ [K]</span>
+                    <input type="number" step="1" value={surface.t0} onChange={e => setSurface(s => ({ ...s, t0: Number(e.target.value)}))} className="w-full text-xs font-mono bg-black/40 border border-white/10 rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors" />
                   </label>
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-[9px] text-slate-400 uppercase tracking-wider font-bold">Pres P₀ [kPa]</span>
-                    <input type="number" step="0.1" value={surface.p0} onChange={e => setSurface(s => ({ ...s, p0: Number(e.target.value)}))} className="w-full text-xs font-mono bg-black/60 border border-slate-700 rounded px-2.5 py-1.5 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all text-slate-200" />
+                  <label className="flex flex-col gap-1">
+                    <span className="text-[10px] text-slate-400">Presión P₀ [kPa]</span>
+                    <input type="number" step="0.1" value={surface.p0} onChange={e => setSurface(s => ({ ...s, p0: Number(e.target.value)}))} className="w-full text-xs font-mono bg-black/40 border border-white/10 rounded px-2 py-1.5 outline-none focus:border-slate-400 transition-colors" />
                   </label>
                 </div>
-              </div>
+              </CollapsibleSection>
 
-              {/* Tramos Layers */}
-              <div className="space-y-3">
-                {segments.map((seg, i) => {
-                  const meta = MODEL_META[seg.model];
-                  const zStart = i === 0 ? 0 : segments[i-1].zMax;
-                  const isExpanded = expandedSegments[seg.id] !== false;
-
-                  return (
-                    <div key={seg.id} className={cn("border rounded-xl relative group transition-all duration-300 shadow-lg overflow-hidden", meta.borderClass, isExpanded ? "bg-slate-900/40" : "bg-slate-900/20")}>
-                      
-                      {/* Left color bar */}
-                      <div className="absolute left-0 top-0 bottom-0 w-1 opacity-80" style={{ backgroundColor: meta.color }} />
-                      
-                      {/* Accordion Header */}
-                      <div className="flex items-center justify-between pl-4 pr-3 py-2 cursor-pointer hover:bg-white/5 transition-colors" onClick={() => toggleSegment(seg.id)}>
-                        <div className="flex items-center gap-3">
-                           <span className={cn("text-[10px] font-bold uppercase tracking-widest", meta.textClass)}>Capa {i+1}</span>
-                           {!isExpanded && <span className="text-[9px] text-slate-500 font-mono">[{zStart} - {seg.zMax} km]</span>}
+              {/* Tramos Ensamblados */}
+              {segments.map((seg, i) => {
+                const zStart = i === 0 ? 0 : segments[i-1].zMax;
+                const meta = MODEL_META[seg.model];
+                
+                return (
+                  <div key={seg.id} className={cn("rounded-xl transition-all relative", meta.bgClass)}>
+                    <div className={cn("absolute left-[-1px] top-3 bottom-0 w-1 opacity-80 border-l-2 border-dashed z-10", meta.borderClass)} />
+                    <div className="absolute left-[-4px] bottom-[-4px] w-2.5 h-2.5 rounded-full z-10" style={{ backgroundColor: meta.color }} />
+                    
+                    <CollapsibleSection 
+                      title={<span className={meta.textClass}>Tramo {i+1}</span>}
+                      defaultOpen={true}
+                      sideAction={
+                        <button onClick={(e) => { e.stopPropagation(); removeSegment(i); }} className="text-slate-500 hover:text-red-400 transition-colors bg-white/5 hover:bg-white/10 p-1.5 rounded-md">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      }
+                    >
+                      <div className="space-y-3 pb-1">
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] uppercase font-bold text-slate-500">Modelo Físico Constante</span>
+                            <select 
+                              value={seg.model}
+                              onChange={(e) => updateSegment(i, { model: e.target.value as CurveModel })}
+                              className={cn(
+                                "w-full text-xs font-bold border rounded-md px-2 py-1.5 outline-none appearance-none transition-colors",
+                                meta.textClass, 
+                                "bg-slate-900 border-black/30 hover:border-white/20 shadow-inner"
+                              )}
+                            >
+                              <option value="lapse_rate" className="bg-slate-900 text-amber-400 font-medium">{MODEL_META.lapse_rate.name}</option>
+                              <option value="isothermal" className="bg-slate-900 text-sky-400 font-medium">{MODEL_META.isothermal.name}</option>
+                              <option value="incompressible" className="bg-slate-900 text-slate-300 font-medium">{MODEL_META.incompressible.name}</option>
+                              <option value="homentropic" className="bg-slate-900 text-pink-400 font-medium">{MODEL_META.homentropic.name}</option>
+                            </select>
                         </div>
-                        <div className="flex items-center gap-2">
-                           <button onClick={(e) => { e.stopPropagation(); removeSegment(i); }} className="p-1 rounded-md text-slate-500 hover:text-red-400 hover:bg-black/40 transition-all">
-                             <Trash2 className="w-3.5 h-3.5" />
-                           </button>
-                           {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-                        </div>
-                      </div>
+                        
+                        <div className="grid grid-cols-[1fr_80px] gap-2 items-end">
+                           <div className="flex-1">
+                            {seg.model === 'lapse_rate' && (
+                               <label className="flex flex-col gap-1">
+                                 <span className="text-[10px] uppercase font-bold text-slate-400">Gradiente dT/dz <span className="normal-case opacity-70">[K/km]</span></span>
+                                 <input type="number" step="0.5" value={seg.lapseRate} onChange={(e) => updateSegment(i, { lapseRate: Number(e.target.value) })} className="w-full text-xs font-mono bg-black/40 border border-black/30 rounded px-2 py-1.5 outline-none focus:border-slate-500" />
+                               </label>
+                            )}
+                            {seg.model === 'homentropic' && (
+                               <label className="flex flex-col gap-1">
+                                 <span className="text-[10px] uppercase font-bold text-slate-400">Coef. Adiabático γ</span>
+                                 <input type="number" step="0.05" min="1.01" value={seg.gamma} onChange={(e) => updateSegment(i, { gamma: Number(e.target.value) })} className="w-full text-xs font-mono bg-black/40 border border-black/30 rounded px-2 py-1.5 outline-none focus:border-slate-500" />
+                               </label>
+                            )}
+                            {(seg.model === 'isothermal' || seg.model === 'incompressible') && (
+                              <div className="text-[10px] text-slate-500 font-mono italic flex h-full items-center bg-black/20 rounded px-2">
+                                Usa T₀ o ρ₀ inicial.
+                              </div>
+                            )}
+                           </div>
 
-                      {/* Accordion Body */}
-                      <div className={cn("transition-all duration-300 ease-in-out", isExpanded ? "max-h-[300px] opacity-100" : "max-h-0 opacity-0 overflow-hidden")}>
-                        <div className="pl-4 pr-3 pb-3 space-y-3 pt-1 border-t border-black/20">
-                          
-                          <div className="flex flex-col gap-1.5">
-                              <span className="text-[9px] uppercase font-bold text-slate-500 tracking-wider">Comportamiento Dinámico</span>
-                              <select 
-                                value={seg.model}
-                                onChange={(e) => updateSegment(i, { model: e.target.value as CurveModel })}
-                                className={cn(
-                                  "w-full text-[11px] font-bold border rounded-lg px-3 py-1.5 outline-none appearance-none transition-colors shadow-inner",
-                                  meta.textClass, 
-                                  "bg-slate-950 border-white/10 hover:border-white/20"
-                                )}
-                              >
-                                <option value="lapse_rate" className="bg-slate-900 text-amber-400">{MODEL_META.lapse_rate.name}</option>
-                                <option value="isothermal" className="bg-slate-900 text-sky-400">{MODEL_META.isothermal.name}</option>
-                                <option value="incompressible" className="bg-slate-900 text-slate-300">{MODEL_META.incompressible.name}</option>
-                                <option value="homentropic" className="bg-slate-900 text-pink-400">{MODEL_META.homentropic.name}</option>
-                              </select>
-                          </div>
-                          
-                          <div className="grid grid-cols-[1fr_80px] gap-3 items-end">
-                             <div className="flex-1 min-h-[40px] flex flex-col justify-end">
-                              {seg.model === 'lapse_rate' && (
-                                 <label className="flex flex-col gap-1.5">
-                                   <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Gradiente dt/dz</span>
-                                   <input type="number" step="0.5" value={seg.lapseRate} onChange={(e) => updateSegment(i, { lapseRate: Number(e.target.value) })} className="w-full text-xs font-mono bg-black/60 border border-white/5 rounded px-2.5 py-1.5 outline-none focus:border-slate-500 text-slate-200" />
-                                 </label>
-                              )}
-                              {seg.model === 'homentropic' && (
-                                 <label className="flex flex-col gap-1.5">
-                                   <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Gamma γ</span>
-                                   <input type="number" step="0.05" min="1.01" value={seg.gamma} onChange={(e) => updateSegment(i, { gamma: Number(e.target.value) })} className="w-full text-xs font-mono bg-black/60 border border-white/5 rounded px-2.5 py-1.5 outline-none focus:border-slate-500 text-slate-200" />
-                                 </label>
-                              )}
-                              {(seg.model === 'isothermal' || seg.model === 'incompressible') && (
-                                <div className="text-[9px] text-slate-500 font-mono italic leading-tight">
-                                  No requiere params extra. Usa nodo previo.
-                                </div>
-                              )}
-                             </div>
-
-                             <label className="flex flex-col gap-1.5">
-                               <span className={cn("text-[9px] uppercase font-bold tracking-wider", meta.textClass)}>Z Max [km]</span>
-                               <input type="number" step="1" value={seg.zMax} min={zStart + 0.1} onChange={(e) => updateSegment(i, { zMax: Number(e.target.value) })} className={cn("w-full text-xs font-mono font-bold bg-black/80 border rounded px-2.5 py-1.5 outline-none text-right", meta.borderClass, meta.textClass)} />
-                             </label>
-                          </div>
+                           <label className="flex flex-col gap-1">
+                             <span className={cn("text-[10px] uppercase font-bold", meta.textClass)}>Hasta <span className="normal-case opacity-70">[Km]</span></span>
+                             <input type="number" step="1" value={seg.zMax} min={zStart + 0.1} onChange={(e) => updateSegment(i, { zMax: Number(e.target.value) })} className={cn("w-full text-xs font-mono font-bold bg-black/50 border rounded px-2 py-1.5 outline-none", meta.borderClass, meta.textClass)} />
+                           </label>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    </CollapsibleSection>
+                  </div>
+                );
+              })}
               
               {segments.length === 0 && (
-                <div className="text-center flex flex-col items-center gap-2 text-xs text-slate-500/70 p-8 border-2 border-dashed border-white/5 rounded-2xl m-2 bg-black/20">
-                  <Layers className="w-8 h-8 opacity-50" />
-                  No hay capas atmosféricas.<br/>Agrega un tramo arriba para comenzar.
+                <div className="text-center text-xs text-slate-500/70 italic p-6 border-2 border-dashed border-white/5 rounded-xl m-2">
+                  No hay tramos construidos.<br/>Añade capas basales con "+ Tramo".
                 </div>
               )}
-           </div>
-         </aside>
+            </div>
+          </div>
+        </aside>
 
-      </main>
+        {/* Panel Principal: Gráfica + Paisaje Mejorado */}
+        <div className="flex-1 bg-black/50 border border-white/10 rounded-2xl relative overflow-hidden shadow-2xl flex flex-col min-h-[50vh] lg:min-h-[400px]">
+          
+          <PlanetLandscape planetId={planetId} />
+
+          {/* Opciones Visibles Sobre la Gráfica */}
+          <div className="absolute top-4 right-4 z-20 flex flex-col gap-2 pointer-events-none max-w-[calc(100%-2rem)]">
+            <label className="pointer-events-auto flex items-center justify-between lg:justify-end gap-2 bg-slate-900/80 backdrop-blur border border-white/10 px-2 py-1.5 lg:px-3 lg:py-1.5 rounded-xl shadow-lg cursor-pointer hover:bg-slate-800 transition-colors w-full lg:w-auto" onClick={() => setShowRef(!showRef)}>
+              <span className="text-[10px] lg:text-xs font-semibold text-slate-300 truncate"><span className="hidden sm:inline">Perfil de </span>Referencia {planet.name}</span>
+              <div className={cn("w-7 h-3.5 lg:w-8 lg:h-4 rounded-full p-0.5 transition-colors shrink-0", showRef ? "bg-cyan-500" : "bg-slate-700")}>
+                <div className={cn("w-2.5 h-2.5 lg:w-3 lg:h-3 rounded-full bg-white transition-transform", showRef ? "translate-x-3.5 lg:translate-x-4" : "")} />
+              </div>
+            </label>
+             <div className="pointer-events-auto flex items-center justify-between lg:justify-end gap-2 bg-slate-900/80 backdrop-blur border border-white/10 px-2 py-1.5 lg:px-3 lg:py-1.5 rounded-xl shadow-lg w-full lg:w-auto">
+              <span className="text-[10px] lg:text-xs font-bold text-indigo-400 truncate">Tu Perfil <span className="hidden sm:inline">Ensamblado</span></span>
+              <div className="flex items-center gap-[1px] shrink-0">
+                  {customProfileGroups.map((g, idx) => (
+                    <div key={`dot-${idx}`} className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full" style={{backgroundColor: MODEL_META[g.model].color}} /> 
+                  ))}
+                  {customProfileGroups.length === 0 && <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-slate-600" />}
+              </div>
+            </div>
+          </div>
+
+          {/* Ejes Twin en el SVG */}
+          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-full absolute inset-0 font-sans z-10" preserveAspectRatio="none">
+            {/* Axis Grid y Twin Labels */}
+            <g className="grid-lines">
+              {/* X-axis grids (vertical lines) & Labels */}
+              {Array.from({ length: 9 }).map((_, i) => {
+                const t = i / 8;
+                const val = bounds.xMin + t * (bounds.xMax - bounds.xMin);
+                const x = mapX(val);
+                return (
+                  <g key={`x-${i}`}>
+                    <line x1={x} y1={margins.top} x2={x} y2={chartHeight - margins.bottom} stroke="#334155" strokeWidth={1} strokeDasharray="4 6" strokeOpacity={0.4} />
+                    <text x={x} y={chartHeight - margins.bottom + 18} fill="#94a3b8" fontSize={11} fontWeight={600} textAnchor="middle" dominantBaseline="hanging">
+                      {formatTick(val)}
+                    </text>
+                  </g>
+                );
+              })}
+              
+              {/* Y-axis grids (horizontal lines) -> Map Altitude and get Ref Pressure */}
+              {Array.from({ length: 9 }).map((_, i) => {
+                const t = i / 8;
+                const zAlt = bounds.yMin + t * (bounds.yMax - bounds.yMin); // Altitud (km)
+                const y = mapY(zAlt);
+                
+                // Twin Axis: Pressure at this altitude
+                const p_ref = interpolateRefPressure(referencePts, zAlt);
+
+                return (
+                  <g key={`y-${i}`}>
+                    <line x1={margins.left} y1={y} x2={chartWidth - margins.right} y2={y} stroke="#334155" strokeWidth={1} strokeDasharray="4 6" strokeOpacity={0.4} />
+                    
+                    {/* LEFT AXIS LABEL: ALTITUDE [km] */}
+                    <text x={margins.left - 12} y={y} fill="#94a3b8" fontSize={11} fontWeight={600} textAnchor="end" dominantBaseline="middle">
+                      {formatTick(zAlt)}
+                    </text>
+                    
+                    {/* RIGHT AXIS LABEL: TWIN Y PRESSURE [kPa] */}
+                    <text x={chartWidth - margins.right + 12} y={y} fill="#38bdf8" fontSize={11} fontWeight={600} textAnchor="start" dominantBaseline="middle">
+                      {formatPressTick(p_ref)}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Box Lines */}
+              <line x1={margins.left} y1={margins.top} x2={margins.left} y2={chartHeight - margins.bottom} stroke="#cbd5e1" strokeWidth={2} />
+              <line x1={chartWidth - margins.right} y1={margins.top} x2={chartWidth - margins.right} y2={chartHeight - margins.bottom} stroke="#0ea5e9" strokeOpacity="0.4" strokeWidth={2} />
+              <line x1={margins.left} y1={chartHeight - margins.bottom} x2={chartWidth - margins.right} y2={chartHeight - margins.bottom} stroke="#cbd5e1" strokeWidth={2} />
+
+              {/* Axis Titles */}
+              <text x={margins.left + innerW / 2} y={chartHeight - 15} fill="#f8fafc" fontSize={13} fontWeight="bold" textAnchor="middle" letterSpacing={1.5}>
+                {xLabel.toUpperCase()}
+              </text>
+              <text x={24} y={margins.top + innerH / 2} fill="#f8fafc" fontSize={13} fontWeight="bold" textAnchor="middle" transform={`rotate(-90 24 ${margins.top + innerH / 2})`} letterSpacing={1}>
+                ALTURA Z [km]
+              </text>
+              <text x={chartWidth - 20} y={margins.top + innerH / 2} fill="#38bdf8" fontSize={12} fontWeight="bold" textAnchor="middle" transform={`rotate(90 ${chartWidth - 20} ${margins.top + innerH / 2})`} letterSpacing={1.5}>
+                PRESIÓN REF. [kPa]
+              </text>
+            </g>
+
+            {/* Curva de Referencia NASA - Continua */}
+            {showRef && referencePts.length > 0 && (
+              <polyline
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth={3}
+                strokeDasharray="6 6"
+                opacity={0.9}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
+                points={referencePts.map((p) => `${mapX(getFieldValue(p, field)).toFixed(1)},${mapY(p.zKm).toFixed(1)}`).join(' ')}
+              />
+            )}
+
+            {/* Curva del Estudiante - Tramos Colorizados y Transparentes */}
+            {customProfileGroups.length > 0 && (
+              <g>
+                {customProfileGroups.map((group, i) => {
+                   const meta = MODEL_META[group.model];
+                   return (
+                     <polyline
+                       key={`seg-line-${i}`}
+                       fill="none"
+                       stroke={meta.color}
+                       strokeWidth={5}
+                       strokeOpacity={0.7} // Trasparencia solicitada
+                       strokeLinecap="round"
+                       strokeLinejoin="round"
+                       className="transition-all duration-300"
+                       style={{ filter: `drop-shadow(0px 0px 8px ${meta.color}80)` }}
+                       points={group.points.map((p) => `${mapX(getFieldValue(p, field)).toFixed(1)},${mapY(p.zKm).toFixed(1)}`).join(' ')}
+                     />
+                   );
+                })}
+
+                {/* Nodos de Intersección */}
+                {customProfileGroups.map((group, i) => {
+                  const pt = group.points[group.points.length - 1];
+                  const cx = mapX(getFieldValue(pt, field));
+                  const cy = mapY(pt.zKm);
+                  return (
+                    <g key={`pt-${i}`}>
+                       <circle cx={cx} cy={cy} r={5} fill="#0f172a" stroke={MODEL_META[group.model].color} strokeWidth={2.5} className="shadow-lg" />
+                       <text x={cx + 10} y={cy + 4} fill={MODEL_META[group.model].color} fontSize={10} fontWeight={700} className="drop-shadow-md">T{i+1}</text>
+                    </g>
+                  );
+                })}
+                
+                {/* Punto Inicial (Superficie) */}
+                {(() => {
+                  const firstGroup = customProfileGroups[0];
+                  if (!firstGroup || firstGroup.points.length === 0) return null;
+                  const p0 = firstGroup.points[0];
+                  const cx = mapX(getFieldValue(p0, field));
+                  const cy = mapY(p0.zKm);
+                  return (
+                    <g>
+                      <circle cx={cx} cy={cy} r={6} fill="#slate-800" stroke="#fff" strokeWidth={2} />
+                      <text x={cx + 12} y={cy + 4} fill="#fff" fontSize={10} fontWeight={700}>SUP</text>
+                    </g>
+                  )
+                })()}
+              </g>
+            )}
+          </svg>
+
+        </div>
+      </section>
 
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>

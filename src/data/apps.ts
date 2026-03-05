@@ -5,8 +5,7 @@ import {
     Box, 
     Activity,
     Route,
-    Gauge,
-    Orbit
+    Gauge
 } from "lucide-react";
 
 export interface AppDefinition {
@@ -52,16 +51,6 @@ export const apps: AppDefinition[] = [
         url: "/apps/hydrostatic-pressure",
         tags: ["Fluidos", "Presión", "Simulación"],
         color: "from-cyan-400 to-blue-500"
-    },
-    {
-        id: "atmosferas-plano-paralelas",
-        title: "Atmósferas Plano Paralelas",
-        description: "Compara perfiles verticales para Tierra, Marte, Venus y Júpiter. Superpone modelos incompresible, isotérmico y homentrópico con parámetros ajustables.",
-        icon: Orbit,
-        image: "/previews/presion.png",
-        url: "/apps/atmosferas-plano-paralelas",
-        tags: ["Fluidos", "Atmósferas", "Hidrostática"],
-        color: "from-indigo-400 to-cyan-500"
     },
     {
         id: "meniscos",

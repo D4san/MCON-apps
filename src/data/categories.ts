@@ -8,7 +8,7 @@ export const categories = [
         icon: Droplets,
         color: "from-cyan-500 to-blue-600",
         theme: "fluidos",
-        apps: ["discreto-continuo", "camino-libre", "meniscos", "hydrostatic-pressure", "atmosferas-plano-paralelas"]
+        apps: ["discreto-continuo", "camino-libre", "meniscos", "hydrostatic-pressure"]
     },
     {
         id: "solidos-y-esfuerzos",
