@@ -574,13 +574,13 @@ export default function ParallelAtmospheres() {
                             className={cn(
                               "w-full text-xs font-bold border rounded-md px-2 py-1.5 outline-none appearance-none transition-colors",
                               meta.textClass, 
-                              "bg-black/40 border-black/30 hover:border-white/20"
+                              "bg-slate-900 border-black/30 hover:border-white/20 shadow-inner"
                             )}
                           >
-                            <option value="lapse_rate">{MODEL_META.lapse_rate.name}</option>
-                            <option value="isothermal">{MODEL_META.isothermal.name}</option>
-                            <option value="incompressible">{MODEL_META.incompressible.name}</option>
-                            <option value="homentropic">{MODEL_META.homentropic.name}</option>
+                            <option value="lapse_rate" className="bg-slate-900 text-amber-400 font-medium">{MODEL_META.lapse_rate.name}</option>
+                            <option value="isothermal" className="bg-slate-900 text-sky-400 font-medium">{MODEL_META.isothermal.name}</option>
+                            <option value="incompressible" className="bg-slate-900 text-slate-300 font-medium">{MODEL_META.incompressible.name}</option>
+                            <option value="homentropic" className="bg-slate-900 text-pink-400 font-medium">{MODEL_META.homentropic.name}</option>
                           </select>
                       </div>
                       
@@ -715,12 +715,13 @@ export default function ParallelAtmospheres() {
             {showRef && referencePts.length > 0 && (
               <polyline
                 fill="none"
-                stroke="#0284c7"
+                stroke="#ffffff"
                 strokeWidth={3}
-                opacity={0.5}
+                strokeDasharray="6 6"
+                opacity={0.9}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="drop-shadow-[0_0_10px_rgba(2,132,199,0.3)]"
+                className="drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"
                 points={referencePts.map((p) => `${mapX(getFieldValue(p, field)).toFixed(1)},${mapY(p.zKm).toFixed(1)}`).join(' ')}
               />
             )}
