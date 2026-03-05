@@ -9,6 +9,7 @@ import MeanFreePath from "./apps/MeanFreePath/MeanFreePath";
 import EulerLagrange from "./apps/EulerLagrange/EulerLagrange";
 import Meniscus from "./apps/Meniscus/Meniscus";
 import HydrostaticPressure from "./apps/HydrostaticPressure/HydrostaticPressure";
+import ParallelAtmospheres from "./apps/ParallelAtmospheres/ParallelAtmospheres";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/apps/euler-lagrange" element={<EulerLagrange />} />
         <Route path="/apps/meniscus" element={<Meniscus />} />
         <Route path="/apps/hydrostatic-pressure" element={<HydrostaticPressure />} />
+        <Route path="/apps/atmosferas-plano-paralelas" element={<ParallelAtmospheres />} />
       </Routes>
     </Layout>
   );

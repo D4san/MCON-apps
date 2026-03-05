@@ -5,7 +5,8 @@ import {
     Box, 
     Activity,
     Route,
-    Gauge
+    Gauge,
+    Orbit
 } from "lucide-react";
 
 export interface AppDefinition {
@@ -53,6 +54,16 @@ export const apps: AppDefinition[] = [
         color: "from-cyan-400 to-blue-500"
     },
     {
+        id: "atmosferas-plano-paralelas",
+        title: "Atmósferas Plano Paralelas",
+        description: "Compara perfiles verticales para Tierra, Marte, Venus y Júpiter. Superpone modelos incompresible, isotérmico y homentrópico con parámetros ajustables.",
+        icon: Orbit,
+        image: "/previews/presion.png",
+        url: "/apps/atmosferas-plano-paralelas",
+        tags: ["Fluidos", "Atmósferas", "Hidrostática"],
+        color: "from-indigo-400 to-cyan-500"
+    },
+    {
         id: "meniscos",
         title: "Deducción de Menisco",
         description: "Derivación interactiva paso a paso de la ecuación del menisco capilar, con visualización del perfil y las fuerzas de tensión superficial.",
@@ -88,8 +99,9 @@ export const apps: AppDefinition[] = [
         description: "Compara lado a lado las perspectivas Euleriana (campo fijo) y Lagrangiana (partícula marcada) con 9 flujos canónicos y visualización de divergencia.",
         icon: Route,
         image: "/previews/euler_lagrange.png",
-        url: "/apps/perspectiva-euler-lagrange",
+        url: "/apps/euler-lagrange",
         tags: ["Teoría", "Referenciales", "Fluidos"],
         color: "from-purple-400 to-violet-500"
     }
 ];
+
