@@ -23,103 +23,140 @@ const GRAVITY_REFS = [
 const GRAVITY_MIN = 0.5;
 const GRAVITY_MAX = 28;
 
-// --- Types ---
 type ToolMode = 'draw' | 'erase' | 'sensor' | 'addWater' | 'removeWater';
 interface Sensor { id: string; x: number; y: number; color: string; }
 interface SimState { wallGrid: boolean[][]; }
 
-// --- 2D Fluid Physics Engine (Cellular Automata) ---
-const MAX_MASS = 1.0;
-const MAX_COMPRESS = 1.15; // allows bottom cells to store slightly more to create U-tube pressure!
-const MIN_MASS = 0.005;
-
-function tickFluid(grid: Float32Array[], walls: boolean[][], pass: number) {
+// --- Hybrid Exact Topological Fluid Solver ---
+// Resolves the exact hydrostatic pressure and level without fluctuation
+function updateSurfacesAndTick(grid: Float32Array[], walls: boolean[][]): Float32Array[] {
     const R = GRID_ROWS, C = GRID_COLS;
-    const nextGrid = grid.map(row => new Float32Array(row));
+    const surfaceMap = Array.from({length: R}, () => new Float32Array(C).fill(-1));
     
-    for (let r = R - 1; r >= 0; r--) {
-        for (let i = 0; i < C; i++) {
-            const c = (pass % 2 === 0) ? i : (C - 1 - i); // Alternate sweep eliminates directional bias
-            if (walls[r][c] || nextGrid[r][c] < MIN_MASS) continue;
-            
-            let m = nextGrid[r][c];
-
-            // 1. Flow down
-            if (r < R - 1 && !walls[r+1][c]) {
-                const spaceBelow = MAX_COMPRESS - nextGrid[r+1][c];
-                if (spaceBelow > 0) {
-                    let flow = Math.min(m, spaceBelow);
-                    flow = Math.min(flow, 0.95);
-                    nextGrid[r][c] -= flow; nextGrid[r+1][c] += flow; m -= flow;
+    // Multiple smooth passes per frame
+    for (let pass = 0; pass < 3; pass++) {
+        // 1. Gravity phase (Straight vertical drop only, ensuring mass falls smoothly)
+        const nextGrid = grid.map(row => new Float32Array(row));
+        for (let r = R - 2; r >= 0; r--) {
+            for (let c = 0; c < C; c++) {
+                if (walls[r][c] || grid[r][c] < 0.01) continue;
+                const m = grid[r][c];
+                if (!walls[r+1][c]) {
+                    const space = 1.0 - nextGrid[r+1][c];
+                    if (space > 0) {
+                        const flow = Math.min(m, space, 0.4); 
+                        nextGrid[r][c] -= flow;
+                        nextGrid[r+1][c] += flow;
+                    }
                 }
             }
-            if (m < MIN_MASS) continue;
+        }
+        for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) grid[r][c] = nextGrid[r][c];
 
-            // 2. Flow sides
-            const leftCan = c > 0 && !walls[r][c-1];
-            const rightCan = c < C - 1 && !walls[r][c+1];
-            
-            if (leftCan && rightCan) {
-                const ml = nextGrid[r][c-1];
-                const mr = nextGrid[r][c+1];
-                if (m > ml || m > mr) {
-                    const total = m + ml + mr;
-                    const avg = total / 3;
-                    let flowL = m > ml ? avg - ml : 0;
-                    let flowR = m > mr ? avg - mr : 0;
-                    const maxFlow = m * 0.45;
-                    flowL = Math.max(0, Math.min(flowL, maxFlow));
-                    flowR = Math.max(0, Math.min(flowR, maxFlow));
-                    nextGrid[r][c] -= (flowL + flowR);
-                    nextGrid[r][c-1] += flowL; nextGrid[r][c+1] += flowR; m -= (flowL + flowR);
-                }
-            } else if (leftCan) {
-                const ml = nextGrid[r][c-1];
-                if (m > ml) {
-                    const flow = Math.min((m - ml) / 2, m * 0.45);
-                    nextGrid[r][c] -= flow; nextGrid[r][c-1] += flow; m -= flow;
-                }
-            } else if (rightCan) {
-                const mr = nextGrid[r][c+1];
-                if (m > mr) {
-                    const flow = Math.min((m - mr) / 2, m * 0.45);
-                    nextGrid[r][c] -= flow; nextGrid[r][c+1] += flow; m -= flow;
-                }
-            }
-            if (m < MIN_MASS) continue;
+        // 2. Hydrostatic Potential Equalization (U-tube & Leveling)
+        const visited = Array.from({length: R}, () => new Array(C).fill(false));
+        for (let startR = 0; startR < R; startR++) {
+            for (let startC = 0; startC < C; startC++) {
+                if (!visited[startR][startC] && grid[startR][startC] > 0.05 && !walls[startR][startC]) {
+                    const comp: Array<{r: number, c: number}> = [];
+                    const q = [{r: startR, c: startC}];
+                    visited[startR][startC] = true;
+                    
+                    // BFS to find contiguous body of fluid
+                    while (q.length > 0) {
+                        const curr = q.shift()!;
+                        comp.push(curr);
+                        for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+                            const nr = curr.r + dr, nc = curr.c + dc;
+                            if (nr >= 0 && nr < R && nc >= 0 && nc < C && !walls[nr][nc]) {
+                                if (!visited[nr][nc] && grid[nr][nc] > 0.01) {
+                                    visited[nr][nc] = true;
+                                    q.push({r: nr, c: nc});
+                                }
+                            }
+                        }
+                    }
+                    
+                    const providers: {r: number, c: number, h: number, m: number}[] = [];
+                    const receivers: {r: number, c: number, h: number}[] = [];
+                    const recVisited = Array.from({length: R}, () => new Array(C).fill(false));
+                    
+                    const addRec = (r: number, c: number, h: number) => {
+                        if (r < 0 || r >= R || c < 0 || c >= C || walls[r][c]) return;
+                        if (!recVisited[r][c]) {
+                            recVisited[r][c] = true;
+                            receivers.push({r, c, h});
+                        }
+                    };
 
-            // 3. Upwards flow (U-tube Pressure relief)
-            if (m > MAX_MASS && r > 0 && !walls[r-1][c]) {
-                const flowUp = m - MAX_MASS;
-                nextGrid[r][c] -= flowUp; nextGrid[r-1][c] += flowUp; m -= flowUp;
+                    let minH = 999;
+                    for (const cell of comp) {
+                        const {r, c} = cell;
+                        const m = grid[r][c];
+                        const h = r + 1 - m; 
+                        if (h < minH) minH = h;
+                        
+                        providers.push({r, c, h, m: grid[r][c]});
+                        
+                        // Internal partial fills
+                        if (m < 0.98) addRec(r, c, h);
+                        
+                        // Adjacent air pockets (to spread horizontally & climb up tubes)
+                        if (r > 0 && grid[r-1][c] <= 0.02) addRec(r-1, c, r);
+                        if (c > 0 && grid[r][c-1] <= 0.02) addRec(r, c-1, r+1);
+                        if (c < C - 1 && grid[r][c+1] <= 0.02) addRec(r, c+1, r+1);
+                    }
+                    
+                    // Assign exact physical baseline for accurate pressure rendering everywhere in body
+                    for (const cell of comp) surfaceMap[cell.r][cell.c] = minH;
+
+                    // Execute teleporting leveling
+                    providers.sort((a,b) => a.h - b.h); // High points (lowest absolute offset) first
+                    receivers.sort((a,b) => b.h - a.h); // Low points (highest absolute offset) first
+                    
+                    let pIdx = 0, rIdx = 0;
+                    while (pIdx < providers.length && rIdx < receivers.length) {
+                        const p = providers[pIdx];
+                        const rec = receivers[rIdx];
+
+                        // Transfer if topologically significant slope exists (fixes jitter)
+                        if (rec.h - p.h > 0.05) { 
+                            const available = grid[p.r][p.c];
+                            const space = 1.0 - grid[rec.r][rec.c];
+                            const diff = (rec.h - p.h) / 2;
+                            const amt = Math.min(available, space, diff, 0.4);
+                            
+                            if (amt > 0.005) {
+                                grid[p.r][p.c] -= amt;
+                                grid[rec.r][rec.c] += amt;
+                                p.h += amt;
+                                rec.h -= amt;
+                                if (grid[p.r][p.c] <= 0.01) pIdx++;
+                                if (grid[rec.r][rec.c] >= 0.99) rIdx++;
+                            } else {
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
-    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) grid[r][c] = nextGrid[r][c];
+    return surfaceMap;
 }
 
-function getDepthMetersAt(x: number, y: number, grid: Float32Array[], walls: boolean[][]): number {
-    const c = Math.floor(Math.max(0, Math.min(GRID_COLS - 1, x)));
-    const startR = Math.floor(Math.max(0, Math.min(GRID_ROWS - 1, y)));
-    if (walls[startR][c] || grid[startR][c] < 0.05) return 0;
-    
-    let depthCells = 0;
-    for (let r = startR; r >= 0; r--) {
-        if (walls[r][c]) break;
-        if (grid[r][c] > 0.01) depthCells += Math.min(1.0, grid[r][c]);
-        else break;
-    }
-    return depthCells * METERS_PER_CELL;
-}
-
-function getPressureKPa(x: number, y: number, grid: Float32Array[], walls: boolean[][], gravity: number, isOpen: boolean): number {
+function getPressureKPa(x: number, y: number, grid: Float32Array[], walls: boolean[][], gravity: number, isOpen: boolean, surfaceMap: Float32Array[]): number {
     const p0 = isOpen ? ATM_PRESSURE : 0;
     const c = Math.floor(Math.max(0, Math.min(GRID_COLS - 1, x)));
     const r = Math.floor(Math.max(0, Math.min(GRID_ROWS - 1, y)));
-    let bonus = 0;
-    // Inject pressure physically from compression
-    if (!walls[r][c] && grid[r][c] > 1.0) bonus = (grid[r][c] - 1.0) * 10 * METERS_PER_CELL;
-    return p0 + (WATER_DENSITY * gravity * (getDepthMetersAt(x, y, grid, walls) + bonus)) / 1000;
+    
+    if (walls[r][c] || grid[r][c] <= 0.01 || surfaceMap[r][c] === -1) {
+        return p0; 
+    }
+    const depthMeters = Math.max(0, (y - surfaceMap[r][c]) * METERS_PER_CELL);
+    return p0 + (WATER_DENSITY * gravity * depthMeters) / 1000;
 }
 
 // Initial state
@@ -137,7 +174,7 @@ function createInitialWallGrid(): boolean[][] {
 export default function HydrostaticPressure() {
     const [simState, setSimState] = useState<SimState>(() => ({ wallGrid: createInitialWallGrid() }));
     
-    // Water is an explicit 2D grid array mapping exact physical state per cell
+    // Explicit 2D fluid array avoiding react hooks entirely
     const waterGridRef = useRef<Float32Array[]>(Array.from({length: GRID_ROWS}, () => new Float32Array(GRID_COLS)));
     
     useEffect(() => {
@@ -145,7 +182,7 @@ export default function HydrostaticPressure() {
         for (let r=0; r<GRID_ROWS; r++) for (let c=0; c<GRID_COLS; c++) if (waterGridRef.current[r][c] > 0) initialized = true;
         if (!initialized) {
             for (let c = 1; c < GRID_COLS - 1; c++) {
-                if (c === 15) continue; // divider wall
+                if (c === 15) continue; // divider
                 for (let r = DEFAULT_FLUID_SURFACE; r < GRID_ROWS - 1; r++) {
                     waterGridRef.current[r][c] = 1.0;
                 }
@@ -153,6 +190,7 @@ export default function HydrostaticPressure() {
         }
     }, [simState.wallGrid]);
 
+    const surfaceMapRef = useRef<Float32Array[]>(Array.from({length: GRID_ROWS}, () => new Float32Array(GRID_COLS).fill(-1)));
     const [gravity, setGravity] = useState(9.81);
     const [isOpenAtmosphere, setIsOpenAtmosphere] = useState(true);
     const [toolMode, setToolMode] = useState<ToolMode>('sensor');
@@ -183,7 +221,7 @@ export default function HydrostaticPressure() {
     const [wallForceSummary, setWallForceSummary] = useState({ count: 0, total: 0, max: 0 });
 
     const getPressureAt = useCallback(
-        (x: number, y: number) => getPressureKPa(x, y, waterGridRef.current, simState.wallGrid, gravity, isOpenAtmosphere),
+        (x: number, y: number) => getPressureKPa(x, y, waterGridRef.current, simState.wallGrid, gravity, isOpenAtmosphere, surfaceMapRef.current),
         [simState.wallGrid, gravity, isOpenAtmosphere]
     );
 
@@ -208,7 +246,7 @@ export default function HydrostaticPressure() {
 
         if (toolMode === 'addWater') {
             if (!simState.wallGrid[r][c]) {
-                waterGridRef.current[r][c] = Math.min(MAX_COMPRESS, waterGridRef.current[r][c] + 1.0);
+                waterGridRef.current[r][c] = Math.min(1.0, waterGridRef.current[r][c] + 1.0);
             }
             return;
         }
@@ -223,13 +261,13 @@ export default function HydrostaticPressure() {
                 const newWall = prev.wallGrid.map(row => [...row]);
                 newWall[r][c] = true;
                 
-                // displace water safely upwards so drawing inside water doesn't delete it
+                // push water upward perfectly when enclosed
                 let displaced = waterGridRef.current[r][c];
                 waterGridRef.current[r][c] = 0;
                 let cr = r - 1;
-                while(cr >= 0 && displaced > 0) {
+                while (cr >= 0 && displaced > 0) {
                     if (!newWall[cr][c]) {
-                        const space = MAX_COMPRESS - waterGridRef.current[cr][c];
+                        const space = 1.0 - waterGridRef.current[cr][c];
                         if (space > 0) {
                             const f = Math.min(space, displaced);
                             waterGridRef.current[cr][c] += f;
@@ -340,8 +378,9 @@ export default function HydrostaticPressure() {
             const { wallGrid, gravity, showPressureField, showWallForces, isOpenAtmosphere } = stateRef.current;
             const grid = waterGridRef.current;
 
-            // Run fluid physics sweeps (Higher steps = faster equalization)
-            for(let i=0; i<12; i++) tickFluid(grid, wallGrid, i);
+            // Step fluid physics & update surface map baseline automatically
+            surfaceMapRef.current = updateSurfacesAndTick(grid, wallGrid);
+            const surfaceMap = surfaceMapRef.current;
 
             const canvas = canvasRef.current;
             const container = containerRef.current;
@@ -369,16 +408,18 @@ export default function HydrostaticPressure() {
                     const m = grid[r][c];
                     if (m <= 0.05) continue;
                     
-                    let fill = Math.min(1.0, m);
-                    // visually connect continuous blocks
+                    let fill = m;
+                    // Connect vertically rendered blocks seamlessly
                     if (r > 0 && !wallGrid[r-1][c] && grid[r-1][c] > 0.05) fill = 1.0;
                     
                     if (showPressureField) {
-                        const depth = getDepthMetersAt(c, r, grid, wallGrid);
+                        const surface = surfaceMap[r][c] !== -1 ? surfaceMap[r][c] : (r + 1 - m);
+                        const depth = Math.max(0, (r + 0.5) - surface);
                         const hue = Math.max(0, 220 - (depth / 10) * 220);
                         ctx.fillStyle = `hsla(${hue}, 100%, 50%, ${0.5 + fill * 0.4})`;
                     } else {
-                        const depth = getDepthMetersAt(c, r, grid, wallGrid);
+                        const surface = surfaceMap[r][c] !== -1 ? surfaceMap[r][c] : (r + 1 - m);
+                        const depth = Math.max(0, (r + 0.5) - surface);
                         const norm = Math.min(1, Math.max(0, depth / 10));
                         ctx.fillStyle = WATER_COLOR;
                         ctx.globalAlpha = 0.6 + norm * 0.4;
@@ -389,6 +430,7 @@ export default function HydrostaticPressure() {
                     ctx.fillRect(c * cellW, y, cellW + 0.5, h + 0.5);
                     ctx.globalAlpha = 1;
                     
+                    // Surface highlight
                     if (r === 0 || wallGrid[r-1][c] || grid[r-1][c] <= 0.05) {
                         ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
                         ctx.beginPath(); ctx.moveTo(c * cellW, y); ctx.lineTo((c + 1) * cellW, y); ctx.stroke(); ctx.setLineDash([]);
@@ -399,7 +441,7 @@ export default function HydrostaticPressure() {
             let forceTotalX = 0, forceTotalY = 0, forceMax = 0, forceCount = 0;
             ctx.fillStyle = '#334155'; ctx.strokeStyle = '#475569';
             
-            // Draw Walls & Forces
+            // Draw Walls & exact directional forces using topographical surface map guarantees
             for (let r = 0; r < GRID_ROWS; r++) {
                 for (let c = 0; c < GRID_COLS; c++) {
                     if (wallGrid[r][c]) {
@@ -410,8 +452,11 @@ export default function HydrostaticPressure() {
                             for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
                                 const nr = r + dr, nc = c + dc;
                                 if (nr < 0 || nr >= GRID_ROWS || nc < 0 || nc >= GRID_COLS || wallGrid[nr][nc]) continue;
-                                const p = getPressureKPa(nc + 0.5, nr + 0.5, grid, wallGrid, gravity, isOpenAtmosphere) - (isOpenAtmosphere ? ATM_PRESSURE : 0);
+                                
+                                // Directly poll pressure from the adjacent water's perspective mathematically solving cavities
+                                const p = getPressureKPa(nc + 0.5, nr + 0.5, grid, wallGrid, gravity, isOpenAtmosphere, surfaceMap) - (isOpenAtmosphere ? ATM_PRESSURE : 0);
                                 if (p <= 0.01) continue;
+
                                 const magnitude = p * WALL_FACE_AREA * 1000;
                                 forceCount++; forceTotalX -= dc * magnitude; forceTotalY -= dr * magnitude; forceMax = Math.max(forceMax, magnitude);
                                 
