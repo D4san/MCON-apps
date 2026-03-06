@@ -1,0 +1,15 @@
+diff --git a/src/apps/HydrostaticPressure/HydrostaticPressure.tsx b/src/apps/HydrostaticPressure/HydrostaticPressure.tsx
+index a8094c1..f649047 100644
+--- a/src/apps/HydrostaticPressure/HydrostaticPressure.tsx
++++ b/src/apps/HydrostaticPressure/HydrostaticPressure.tsx
+@@ -430,8 +430,8 @@ export default function HydrostaticPressure() {
+     // Bresenham line: returns all cells between (r0,c0) and (r1,c1)
+     const bresenhamLine = useCallback((r0: number, c0: number, r1: number, c1: number) => {
+         const cells: Array<{ r: number; c: number }> = [];
+-        let dr = Math.abs(r1 - r0);
+-        let dc = Math.abs(c1 - c0);
++        const dr = Math.abs(r1 - r0);
++        const dc = Math.abs(c1 - c0);
+         const sr = r0 < r1 ? 1 : -1;
+         const sc = c0 < c1 ? 1 : -1;
+         let err = dc - dr;

@@ -183,13 +183,17 @@ function formatPressTick(val: number) {
 }
 
 function PlanetIcon({ id, className }: { id: string; className?: string }) {
-  const styles: Record<string, string> = {
-    earth: 'bg-gradient-to-br from-[#3b82f6] to-[#10b981] shadow-[0_0_8px_rgba(59,130,246,0.3)]',
-    mars: 'bg-gradient-to-br from-[#ef4444] to-[#fb923c] shadow-[0_0_8px_rgba(239,68,68,0.3)]',
-    venus: 'bg-gradient-to-br from-[#fcd34d] to-[#f97316] shadow-[0_0_8px_rgba(245,158,11,0.3)]',
-    jupiter: 'bg-gradient-to-br from-[#d97706] via-[#fcd34d] to-[#a8a29e] shadow-[0_0_8px_rgba(217,119,6,0.3)]',
-  };
-  return <div className={cn('rounded-full border border-white/20 relative overflow-hidden', styles[id] || 'bg-slate-500', className)} />;
+    const emojis: Record<string, string> = {
+      earth: '🌍',
+      mars: '🔴',
+      venus: '🟡',
+      jupiter: '🟠',
+    };
+    return (
+      <div className={cn('flex items-center justify-center rounded-full border border-white/10 bg-black/40 overflow-hidden shadow-inner', className)}>
+        <span className="text-sm lg:text-base leading-none translate-y-[1px] opacity-90">{emojis[id] || '🌍'}</span>
+      </div>
+    );
 }
 
 // ------ BACKGROUND LANDSCAPES WITH ANIMATIONS ------

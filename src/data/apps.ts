@@ -5,7 +5,8 @@ import {
     Box, 
     Activity,
     Route,
-    Gauge
+    Gauge,
+    Cloud
 } from "lucide-react";
 
 export interface AppDefinition {
@@ -51,6 +52,16 @@ export const apps: AppDefinition[] = [
         url: "/apps/hydrostatic-pressure",
         tags: ["Fluidos", "Presión", "Simulación"],
         color: "from-cyan-400 to-blue-500"
+    },
+    {
+        id: "parallel-atmospheres",
+        title: "Atmósferas Paralelas",
+        description: "Construye perfiles térmicos por capas y compara modelos termodinámicos como la atmósfera ISAtm y modelos adiabáticos o isotérmicos.",
+        icon: Cloud,
+        image: "/previews/atm-pararel.png",
+        url: "/apps/parallel-atmospheres",
+        tags: ["Termodinámica", "Fluidos", "Gases"],
+        color: "from-sky-400 to-indigo-500"
     },
     {
         id: "meniscos",
