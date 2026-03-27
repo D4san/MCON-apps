@@ -17,7 +17,7 @@ export const categories = [
         icon: Cuboid,
         color: "from-rose-500 to-pink-600",
         theme: "solidos",
-        apps: ["deformaciones"]
+        apps: ["deformaciones", "esfuerzos"]
     },
     {
         id: "hidrodinamica",

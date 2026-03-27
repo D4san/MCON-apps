@@ -102,6 +102,16 @@ export const apps: AppDefinition[] = [
         url: "/apps/euler-lagrange",
         tags: ["Teoría", "Referenciales", "Fluidos"],
         color: "from-purple-400 to-violet-500"
+    },
+    {
+        id: "esfuerzos",
+        title: "Tensor de Esfuerzos 3D",
+        description: "Visualiza el estado de esfuerzos (Cauchy) en un punto con un cubo diferencial en 3D interactivo. Diferencia esfuerzo vs deformación.",
+        icon: Box,
+        image: "/previews/esfuerzos.png",
+        url: "/apps/stress-tensor",
+        tags: ["Mecánica Sólidos", "Tensores", "3D", "Esfuerzos"],
+        color: "from-cyan-400 to-blue-500"
     }
 ];
 

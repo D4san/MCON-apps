@@ -10,6 +10,7 @@ import EulerLagrange from "./apps/EulerLagrange/EulerLagrange";
 import Meniscus from "./apps/Meniscus/Meniscus";
 import HydrostaticPressure from "./apps/HydrostaticPressure/HydrostaticPressure";
 import ParallelAtmospheres from "./apps/ParallelAtmospheres/ParallelAtmospheres";
+import StressTensor from "./apps/StressTensor/StressTensor";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/apps/meniscus" element={<Meniscus />} />
         <Route path="/apps/hydrostatic-pressure" element={<HydrostaticPressure />} />
         <Route path="/apps/parallel-atmospheres" element={<ParallelAtmospheres />} />
+        <Route path="/apps/stress-tensor" element={<StressTensor />} />
       </Routes>
     </Layout>
   );
