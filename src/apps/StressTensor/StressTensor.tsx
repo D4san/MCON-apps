@@ -142,9 +142,9 @@ const StressTensor = () => {
     
     let euler = new THREE.Euler().setFromRotationMatrix(m, 'XYZ');
     setRotation({
-      x: euler.x * 180 / Math.PI,
-      y: euler.y * 180 / Math.PI,
-      z: euler.z * 180 / Math.PI
+      x: Math.round(euler.x * 180 / Math.PI),
+      y: Math.round(euler.y * 180 / Math.PI),
+      z: Math.round(euler.z * 180 / Math.PI)
     });
   };
 
