@@ -1,5 +1,6 @@
 import { 
     Atom, 
+    Beaker,
     Wind, 
     Waves, 
     Box, 
@@ -102,6 +103,16 @@ export const apps: AppDefinition[] = [
         url: "/apps/euler-lagrange",
         tags: ["Teoría", "Referenciales", "Fluidos"],
         color: "from-purple-400 to-violet-500"
+    },
+    {
+        id: "tablero-flujo-euler",
+        title: "Tablero de Flujo Ideal de Euler",
+        description: "Sandbox de flujo ideal para combinar campos, activar objetos como cilindro, Venturi o depósito, y leer velocidad, vorticidad, presión y Bernoulli.",
+        icon: Beaker,
+        image: "/previews/tablero_flujo_euler.png",
+        url: "/apps/tablero-flujo-ideal-euler",
+        tags: ["Euler", "Bernoulli", "Vorticidad", "Función de corriente"],
+        color: "from-cyan-400 to-emerald-500"
     },
     {
         id: "esfuerzos",
