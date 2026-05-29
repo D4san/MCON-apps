@@ -20,7 +20,7 @@ export default function PitotTab() {
     const [isPlaying, setIsPlaying] = useState<boolean>(true);
     const [showStreamlines, setShowStreamlines] = useState<boolean>(true);
     const [showParticles, setShowParticles] = useState<boolean>(true);
-    const [showVelocities, setShowVelocities] = useState<boolean>(true);
+    const [showVelocities] = useState<boolean>(true);
     const [showHeatmap, setShowHeatmap] = useState<boolean>(false);
     const [isPanelOpen, setIsPanelOpen] = useState<boolean>(true);
     const [isBottomOpen, setIsBottomOpen] = useState<boolean>(true);

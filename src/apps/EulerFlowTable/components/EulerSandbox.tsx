@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Circle, Square, Triangle, Brush, Eraser, Layers, Activity, Minus, Trash2, ChevronDown, ChevronUp, Wind, Droplet } from "lucide-react";
 import { cn } from "../../../lib/utils";
 
@@ -645,15 +645,18 @@ export default function EulerSandbox() {
                             <button 
                                 onClick={() => { 
                                     let grid = fluidRef.current;
-                                    grid.u.fill(U0); grid.v.fill(0); grid.p.fill(0); grid.div.fill(0);
-                                    setParticles([]);
+                                    if (grid) {
+                                        grid.u.fill(U0); grid.v.fill(0); grid.p.fill(0); grid.div.fill(0);
+                                    }
+                                    mParticlesRef.current = [];
+                                    smokeLinesRef.current = Array.from({ length: Math.floor(ROWS/4) }, () => []);
                                 }}
                                 className={`py-2 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1 border border-indigo-500/20`}
                             >
                                 <Activity size={16} /> Reset Fluido
                             </button>
                             <button 
-                                onClick={() => { setGeometries([]); fluidRef.current.isSolid.fill(false); }}
+                                onClick={() => { if (fluidRef.current) fluidRef.current.isSolid.fill(0); }}
                                 className={`py-2 bg-slate-800 hover:bg-slate-700 text-red-400 rounded-xl text-xs font-bold transition-all flex flex-col items-center gap-1 border border-red-500/20`}
                             >
                                 <Trash2 size={16} /> Borrar Sólidos

@@ -190,7 +190,6 @@ export default function VenturiTab() {
             }
 
             // 3. Cálculos de Piezómetros
-            const d1 = getDiameterAt(x1);
             const d3 = getDiameterAt(x3);
             const v3 = Q_m3s / (Math.PI * Math.pow(d3 / 1000, 2) / 4);
 
@@ -336,8 +335,6 @@ export default function VenturiTab() {
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
     }, [Q, dThroat, rho, useLosses, isPlaying, showVelGraph, showParticles, showHeatmap]);
-
-    const p1_static = 101325; // 1 atm
 
     return (
         <div className="flex h-full w-full bg-[#080b11] text-slate-100 overflow-hidden relative">
