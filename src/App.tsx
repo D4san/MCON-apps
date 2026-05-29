@@ -12,6 +12,7 @@ import HydrostaticPressure from "./apps/HydrostaticPressure/HydrostaticPressure"
 import ParallelAtmospheres from "./apps/ParallelAtmospheres/ParallelAtmospheres";
 import StressTensor from "./apps/StressTensor/StressTensor";
 import EulerFlowTable from "./apps/EulerFlowTable/EulerFlowTable";
+import StreamFunctionExplainer from "./apps/StreamFunctionExplainer/StreamFunctionExplainer";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/apps/camino-libre-medio" element={<MeanFreePath />} />
         <Route path="/apps/euler-lagrange" element={<EulerLagrange />} />
         <Route path="/apps/tablero-flujo-ideal-euler" element={<EulerFlowTable />} />
+        <Route path="/apps/funcion-corriente" element={<StreamFunctionExplainer />} />
         <Route path="/apps/meniscus" element={<Meniscus />} />
         <Route path="/apps/hydrostatic-pressure" element={<HydrostaticPressure />} />
         <Route path="/apps/parallel-atmospheres" element={<ParallelAtmospheres />} />

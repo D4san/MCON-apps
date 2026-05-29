@@ -26,6 +26,6 @@ export const categories = [
         icon: Waves,
         color: "from-amber-500 to-orange-600",
         theme: "hidrodinamica",
-        apps: ["velocidades", "euler-lagrange", "tablero-flujo-euler"]
+        apps: ["velocidades", "euler-lagrange", "tablero-flujo-euler", "funcion-corriente"]
     }
 ];

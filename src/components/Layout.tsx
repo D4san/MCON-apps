@@ -19,7 +19,7 @@ function ThemeBackground() {
         return <SolidBackground />;
     }
 
-    if (path.includes("hidrodinamica") || path.includes("velocity-field") || path.includes("euler-lagrange") || path.includes("tablero-flujo-ideal-euler")) {
+    if (path.includes("hidrodinamica") || path.includes("velocity-field") || path.includes("euler-lagrange") || path.includes("tablero-flujo-ideal-euler") || path.includes("funcion-corriente")) {
         return <HydroBackground />;
     }
 

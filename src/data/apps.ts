@@ -119,7 +119,7 @@ export const apps: AppDefinition[] = [
         title: "Tensor de Esfuerzos 3D",
         description: "Visualiza el estado de esfuerzos (Cauchy) en un punto con un cubo diferencial en 3D interactivo. Diferencia esfuerzo vs deformación.",
         icon: Box,
-        image: "/previews/esfuerzos.png",
+        image: "/previews/Tensor_esfuerzos.png",
         url: "/apps/stress-tensor",
         tags: ["Mecánica Sólidos", "Tensores", "3D", "Esfuerzos"],
         color: "from-cyan-400 to-blue-500"

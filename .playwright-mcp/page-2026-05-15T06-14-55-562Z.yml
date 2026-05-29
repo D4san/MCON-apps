@@ -1,0 +1,110 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "Volver al inicio" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img [ref=e8]
+        - link "MConHub Logo MConHub Interactivo" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img "MConHub Logo" [ref=e13]
+          - generic [ref=e14]:
+            - generic [ref=e15]: MConHub
+            - generic [ref=e16]: Interactivo
+      - generic [ref=e17]:
+        - link "Fluidos" [ref=e18] [cursor=pointer]:
+          - /url: /category/fluidos-en-reposo
+          - img [ref=e19]
+          - text: Fluidos
+        - link "Sólidos" [ref=e22] [cursor=pointer]:
+          - /url: /category/solidos-y-esfuerzos
+          - img [ref=e23]
+          - text: Sólidos
+        - link "Hidrodinámica" [ref=e27] [cursor=pointer]:
+          - /url: /category/hidrodinamica
+          - img [ref=e28]
+          - text: Hidrodinámica
+      - generic [ref=e32]:
+        - link "Inicio" [ref=e33] [cursor=pointer]:
+          - /url: /
+          - img [ref=e34]
+          - generic [ref=e37]: Inicio
+        - link "UdeA" [ref=e39] [cursor=pointer]:
+          - /url: https://www.udea.edu.co
+  - main [ref=e40]:
+    - generic [ref=e41]:
+      - complementary [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]:
+            - generic [ref=e46]:
+              - heading "Tablero de Flujo Ideal de Euler" [level=1] [ref=e47]
+              - paragraph [ref=e48]: sandbox analitico
+            - generic [ref=e49]:
+              - button "Campos" [ref=e50]:
+                - img [ref=e51]
+                - text: Campos
+              - button "Objetos" [pressed] [ref=e55]:
+                - img [ref=e56]
+                - text: Objetos
+              - button "Diagnostico" [ref=e58]:
+                - img [ref=e59]
+                - text: Diagnostico
+          - generic [ref=e162]:
+            - generic [ref=e163]:
+              - button "Plano abierto 1 campo(s) activo(s)" [ref=e164]:
+                - generic [ref=e166]: Plano abierto
+                - paragraph [ref=e168]: 1 campo(s) activo(s)
+              - button "Cilindro en corriente uniforme funcion de corriente + no penetracion" [ref=e169]:
+                - generic [ref=e171]: Cilindro en corriente uniforme
+                - paragraph [ref=e173]: funcion de corriente + no penetracion
+              - button "Tubo / Venturi ideal continuidad + Bernoulli 1D" [ref=e174]:
+                - generic [ref=e176]: Tubo / Venturi ideal
+                - paragraph [ref=e178]: continuidad + Bernoulli 1D
+              - button "Deposito con orificio Torricelli + chorro balistico" [active] [ref=e179]:
+                - generic [ref=e181]: Deposito con orificio
+                - paragraph [ref=e183]: Torricelli + chorro balistico
+            - generic [ref=e196]:
+              - generic [ref=e197]:
+                - generic [ref=e198]:
+                  - generic [ref=e199]: altura H
+                  - generic [ref=e200]: 2.40 m
+                - slider "altura H 2.40 m" [ref=e201] [cursor=pointer]: "2.4"
+              - generic [ref=e202]:
+                - generic [ref=e203]:
+                  - generic [ref=e204]: gravedad g
+                  - generic [ref=e205]: 9.81 m/s2
+                - slider "gravedad g 9.81 m/s2" [ref=e206] [cursor=pointer]: "9.81"
+              - generic [ref=e207]:
+                - generic [ref=e208]:
+                  - generic [ref=e209]: densidad rho
+                  - generic [ref=e210]: 1000.0 kg/m3
+                - slider "densidad rho 1000.0 kg/m3" [ref=e211] [cursor=pointer]: "1000"
+              - generic [ref=e212]: v0 = 6.86 m/s. La densidad se cancela en Torricelli si ambos puntos estan a presion atmosferica.
+      - main [ref=e137]:
+        - generic [ref=e138]:
+          - generic [ref=e139]:
+            - generic [ref=e140]:
+              - img [ref=e141]
+              - generic [ref=e143]: v0 = sqrt(2 g H) = 6.86 m/s
+            - paragraph [ref=e144]: No resolvimos todo el interior; usamos Bernoulli entre superficie libre y salida.
+          - generic [ref=e145]:
+            - button "Pausar" [ref=e146]:
+              - img [ref=e147]
+              - text: Pausar
+            - button "Reiniciar" [ref=e150]:
+              - img [ref=e151]
+            - button "Modo tablero" [ref=e156]:
+              - img [ref=e157]
+              - text: Modo tablero
+        - generic [ref=e160]:
+          - generic:
+            - generic:
+              - img
+              - text: bucket
+            - generic:
+              - generic:
+                - text: t =
+                - generic: 38.8 s
+              - generic: 1 piezas
+              - generic: presion activa
+              - generic: omega oculto

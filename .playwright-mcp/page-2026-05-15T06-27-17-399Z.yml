@@ -1,0 +1,82 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "Volver al inicio" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img [ref=e8]
+        - link "MConHub Logo MConHub Interactivo" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img "MConHub Logo" [ref=e13]
+          - generic [ref=e14]:
+            - generic [ref=e15]: MConHub
+            - generic [ref=e16]: Interactivo
+      - generic [ref=e17]:
+        - link "Inicio" [ref=e18] [cursor=pointer]:
+          - /url: /
+          - img [ref=e19]
+          - generic [ref=e22]: Inicio
+        - link "UdeA" [ref=e24] [cursor=pointer]:
+          - /url: https://www.udea.edu.co
+        - button "Secciones" [ref=e25]:
+          - generic [ref=e26]: Secciones
+          - img [ref=e27]
+  - main [ref=e28]:
+    - generic [ref=e29]:
+      - complementary [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e34]:
+              - heading "Tablero de Flujo Ideal de Euler" [level=1] [ref=e35]
+              - paragraph [ref=e36]: sandbox analitico
+            - generic [ref=e37]:
+              - button "Campos" [ref=e38]:
+                - img [ref=e39]
+                - text: Campos
+              - button "Objetos" [active] [pressed] [ref=e43]:
+                - img [ref=e44]
+                - text: Objetos
+              - button "Diagnostico" [ref=e46]:
+                - img [ref=e47]
+                - text: Diagnostico
+          - generic [ref=e151]:
+            - button "Plano abierto 1 campo(s) activo(s)" [ref=e152]:
+              - generic [ref=e154]: Plano abierto
+              - paragraph [ref=e156]: 1 campo(s) activo(s)
+            - button "Cilindro en corriente uniforme funcion de corriente + no penetracion" [ref=e157]:
+              - generic [ref=e159]: Cilindro en corriente uniforme
+              - paragraph [ref=e161]: funcion de corriente + no penetracion
+            - button "Tubo / Venturi ideal continuidad + Bernoulli 1D" [ref=e162]:
+              - generic [ref=e164]: Tubo / Venturi ideal
+              - paragraph [ref=e166]: continuidad + Bernoulli 1D
+            - button "Deposito con orificio Torricelli + chorro balistico" [ref=e167]:
+              - generic [ref=e169]: Deposito con orificio
+              - paragraph [ref=e171]: Torricelli + chorro balistico
+      - main [ref=e125]:
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - img [ref=e129]
+              - generic [ref=e131]: Corriente uniforme
+            - paragraph [ref=e132]: Primero se construye el campo; despues se pregunta que energia y presion puede leer Bernoulli.
+          - generic [ref=e133]:
+            - button "Pausar" [ref=e134]:
+              - img [ref=e135]
+              - text: Pausar
+            - button "Reiniciar" [ref=e138]:
+              - img [ref=e139]
+            - button "Modo tablero" [ref=e144]:
+              - img [ref=e145]
+              - text: Modo tablero
+        - generic [ref=e148]:
+          - generic:
+            - generic:
+              - img
+              - text: campos combinables
+            - generic:
+              - generic:
+                - text: t =
+                - generic: 10.8 s
+              - generic: 1 piezas
+              - generic: presion activa
+              - generic: omega oculto

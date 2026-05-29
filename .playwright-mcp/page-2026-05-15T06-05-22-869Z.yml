@@ -1,0 +1,93 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "Volver al inicio" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img [ref=e8]
+        - link "MConHub Logo MConHub Interactivo" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img "MConHub Logo" [ref=e13]
+          - generic [ref=e14]:
+            - generic [ref=e15]: MConHub
+            - generic [ref=e16]: Interactivo
+      - generic [ref=e150]:
+        - link "Fluidos" [ref=e151] [cursor=pointer]:
+          - /url: /category/fluidos-en-reposo
+          - img [ref=e152]
+          - text: Fluidos
+        - link "Sólidos" [ref=e155] [cursor=pointer]:
+          - /url: /category/solidos-y-esfuerzos
+          - img [ref=e156]
+          - text: Sólidos
+        - link "Hidrodinámica" [ref=e160] [cursor=pointer]:
+          - /url: /category/hidrodinamica
+          - img [ref=e161]
+          - text: Hidrodinámica
+      - generic [ref=e17]:
+        - link "Inicio" [ref=e18] [cursor=pointer]:
+          - /url: /
+          - img [ref=e19]
+          - generic [ref=e22]: Inicio
+        - link "UdeA" [ref=e24] [cursor=pointer]:
+          - /url: https://www.udea.edu.co
+  - main [ref=e28]:
+    - generic [ref=e29]:
+      - complementary [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e34]:
+              - heading "Tablero de Flujo Ideal de Euler" [level=1] [ref=e35]
+              - paragraph [ref=e36]: sandbox analitico
+            - generic [ref=e37]:
+              - button "Campos" [ref=e38]:
+                - img [ref=e39]
+                - text: Campos
+              - button "Objetos" [active] [ref=e43]:
+                - img [ref=e44]
+                - text: Objetos
+              - button "Diagnostico" [ref=e46]:
+                - img [ref=e47]
+                - text: Diagnostico
+          - generic [ref=e358]:
+            - button "Plano abierto 2 campo(s) activo(s)" [ref=e359]:
+              - generic [ref=e361]: Plano abierto
+              - paragraph [ref=e363]: 2 campo(s) activo(s)
+            - button "Cilindro en corriente uniforme funcion de corriente + no penetracion" [ref=e364]:
+              - generic [ref=e366]: Cilindro en corriente uniforme
+              - paragraph [ref=e368]: funcion de corriente + no penetracion
+            - button "Tubo / Venturi ideal continuidad + Bernoulli 1D" [ref=e369]:
+              - generic [ref=e371]: Tubo / Venturi ideal
+              - paragraph [ref=e373]: continuidad + Bernoulli 1D
+            - button "Deposito con orificio Torricelli + chorro balistico" [ref=e374]:
+              - generic [ref=e376]: Deposito con orificio
+              - paragraph [ref=e378]: Torricelli + chorro balistico
+      - main [ref=e125]:
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - img [ref=e129]
+              - generic [ref=e131]: Vortice puntual regularizado + Cizalladura
+            - paragraph [ref=e132]: Con vorticidad encendida, Bernoulli puede leerse por linea, pero ya no como constante global.
+          - generic [ref=e133]:
+            - button "Pausar" [ref=e134]:
+              - img [ref=e135]
+              - text: Pausar
+            - button "Reiniciar" [ref=e138]:
+              - img [ref=e139]
+            - button "Modo tablero" [ref=e144]:
+              - img [ref=e145]
+              - text: Modo tablero
+        - generic [ref=e148]:
+          - generic:
+            - generic:
+              - img
+              - text: campos combinables
+            - generic:
+              - generic:
+                - text: t =
+                - generic: 108.1 s
+              - generic: 2 piezas
+              - generic: presion limitada
+              - generic: omega visible
+          - generic: "Presion global deshabilitada: la combinacion actual tiene vorticidad apreciable. Puedes leer energia por lineas, pero no imponer una unica constante global."

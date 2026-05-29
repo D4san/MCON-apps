@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Vista previa de funcion de corriente alrededor de un cilindro">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#061826"/>
+      <stop offset="0.58" stop-color="#0f2b3a"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <radialGradient id="pressure" cx="50%" cy="50%" r="48%">
+      <stop offset="0" stop-color="#f59e0b" stop-opacity="0.46"/>
+      <stop offset="0.42" stop-color="#22d3ee" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#0f172a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)"/>
+  <rect width="960" height="540" fill="url(#pressure)"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M46 112 C164 66 265 78 364 132 C450 178 519 179 602 132 C704 75 806 78 914 116" stroke="#bae6fd" stroke-width="3" opacity="0.72"/>
+    <path d="M44 190 C164 153 266 157 358 203 C445 246 521 248 606 203 C704 152 813 154 916 194" stroke="#67e8f9" stroke-width="2.4" opacity="0.66"/>
+    <path d="M42 270 C171 270 300 270 387 270 M573 270 C664 270 789 270 918 270" stroke="#e2e8f0" stroke-width="2.2" opacity="0.66"/>
+    <path d="M44 350 C164 387 266 383 358 337 C445 294 521 292 606 337 C704 388 813 386 916 346" stroke="#67e8f9" stroke-width="2.4" opacity="0.66"/>
+    <path d="M46 428 C164 474 265 462 364 408 C450 362 519 361 602 408 C704 465 806 462 914 424" stroke="#bae6fd" stroke-width="3" opacity="0.72"/>
+  </g>
+  <circle cx="480" cy="270" r="92" fill="#0f172a" stroke="#fbbf24" stroke-width="7"/>
+  <circle cx="480" cy="270" r="110" fill="none" stroke="#fbbf24" stroke-width="2" stroke-dasharray="12 12" opacity="0.35"/>
+  <g fill="#e0f2fe" font-family="Inter, Segoe UI, sans-serif">
+    <text x="54" y="70" font-size="30" font-weight="800">Funcion de corriente</text>
+    <text x="54" y="106" font-size="18" opacity="0.76">psi como geometria de no penetracion</text>
+    <text x="410" y="278" font-size="21" font-weight="800" fill="#fef3c7">v_r = 0</text>
+  </g>
+</svg>

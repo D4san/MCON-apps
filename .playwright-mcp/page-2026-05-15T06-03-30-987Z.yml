@@ -1,0 +1,125 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - link "Volver al inicio" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img [ref=e8]
+        - link "MConHub Logo MConHub Interactivo" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img "MConHub Logo" [ref=e13]
+          - generic [ref=e14]:
+            - generic [ref=e15]: MConHub
+            - generic [ref=e16]: Interactivo
+      - generic [ref=e17]:
+        - link "Inicio" [ref=e18] [cursor=pointer]:
+          - /url: /
+          - img [ref=e19]
+          - generic [ref=e22]: Inicio
+        - link "UdeA" [ref=e24] [cursor=pointer]:
+          - /url: https://www.udea.edu.co
+        - button "Secciones" [ref=e25]:
+          - generic [ref=e26]: Secciones
+          - img [ref=e27]
+  - main [ref=e28]:
+    - generic [ref=e29]:
+      - complementary [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e34]:
+              - heading "Tablero de Flujo Ideal de Euler" [level=1] [ref=e35]
+              - paragraph [ref=e36]: sandbox analitico
+            - generic [ref=e37]:
+              - button "Campos" [ref=e38]:
+                - img [ref=e39]
+                - text: Campos
+              - button "Objetos" [ref=e43]:
+                - img [ref=e44]
+                - text: Objetos
+              - button "Diagnostico" [ref=e46]:
+                - img [ref=e47]
+                - text: Diagnostico
+          - generic [ref=e51]:
+            - generic [ref=e52]: Estas piezas se combinan en plano abierto. Al activar una escena de objeto, el tablero usa su modelo ideal propio.
+            - generic [ref=e53]:
+              - 'button "Corriente uniforme Campo base: todo el fluido avanza en la misma direccion." [ref=e54]':
+                - generic [ref=e56]: Corriente uniforme
+                - paragraph [ref=e58]: "Campo base: todo el fluido avanza en la misma direccion."
+              - generic [ref=e60]:
+                - generic [ref=e61]:
+                  - generic [ref=e62]: U
+                  - generic [ref=e63]: "1.20"
+                - slider "U 1.20" [ref=e64] [cursor=pointer]: "1.2"
+            - generic [ref=e65]:
+              - button "Vortice puntual regularizado Agrega circulacion local; el nucleo esta suavizado para estabilidad visual." [ref=e66]:
+                - generic [ref=e68]: Vortice puntual regularizado
+                - paragraph [ref=e70]: Agrega circulacion local; el nucleo esta suavizado para estabilidad visual.
+              - generic [ref=e72]:
+                - generic [ref=e73]:
+                  - generic [ref=e74]: Gamma
+                  - generic [ref=e75]: "3.20"
+                - slider "Gamma 3.20" [ref=e76] [cursor=pointer]: "3.2"
+            - generic [ref=e77]:
+              - button "Rotacion rigida Todo gira como cuerpo rigido; omega_z = 2 Omega." [ref=e78]:
+                - generic [ref=e80]: Rotacion rigida
+                - paragraph [ref=e82]: Todo gira como cuerpo rigido; omega_z = 2 Omega.
+              - generic [ref=e84]:
+                - generic [ref=e85]:
+                  - generic [ref=e86]: Omega
+                  - generic [ref=e87]: "0.45"
+                - slider "Omega 0.45" [ref=e88] [cursor=pointer]: "0.45"
+            - generic [ref=e89]:
+              - button "Cizalladura Capas con distinta velocidad horizontal." [ref=e90]:
+                - generic [ref=e92]: Cizalladura
+                - paragraph [ref=e94]: Capas con distinta velocidad horizontal.
+              - generic [ref=e96]:
+                - generic [ref=e97]:
+                  - generic [ref=e98]: k
+                  - generic [ref=e99]: "0.45"
+                - slider "k 0.45" [ref=e100] [cursor=pointer]: "0.45"
+            - generic [ref=e101]:
+              - button "Fuente / sumidero Mete o extrae caudal local; prende divergencia cerca del centro." [ref=e102]:
+                - generic [ref=e104]: Fuente / sumidero
+                - paragraph [ref=e106]: Mete o extrae caudal local; prende divergencia cerca del centro.
+              - generic [ref=e108]:
+                - generic [ref=e109]:
+                  - generic [ref=e110]: Q
+                  - generic [ref=e111]: "1.50"
+                - slider "Q 1.50" [ref=e112] [cursor=pointer]: "1.5"
+            - generic [ref=e113]:
+              - button "Dipolo ideal Correccion localizada de flujo potencial." [ref=e114]:
+                - generic [ref=e116]: Dipolo ideal
+                - paragraph [ref=e118]: Correccion localizada de flujo potencial.
+              - generic [ref=e120]:
+                - generic [ref=e121]:
+                  - generic [ref=e122]: mu
+                  - generic [ref=e123]: "3.00"
+                - slider "mu 3.00" [ref=e124] [cursor=pointer]: "3"
+      - main [ref=e125]:
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - generic [ref=e128]:
+              - img [ref=e129]
+              - generic [ref=e131]: Corriente uniforme
+            - paragraph [ref=e132]: Primero se construye el campo; despues se pregunta que energia y presion puede leer Bernoulli.
+          - generic [ref=e133]:
+            - button "Pausar" [ref=e134]:
+              - img [ref=e135]
+              - text: Pausar
+            - button "Reiniciar" [ref=e138]:
+              - img [ref=e139]
+            - button "Modo tablero" [ref=e144]:
+              - img [ref=e145]
+              - text: Modo tablero
+        - generic [ref=e148]:
+          - generic:
+            - generic:
+              - img
+              - text: campos combinables
+            - generic:
+              - generic:
+                - text: t =
+                - generic: 0.0 s
+              - generic: 1 piezas
+              - generic: presion activa
+              - generic: omega oculto
